@@ -1,18 +1,25 @@
 {
   "expo": {
-    "name": "Treningsapp",
-    "slug": "Treningsapp",
+    "name": "LØFT",
+    "slug": "loft-treningsapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "treningsapp",
+    "scheme": "loft",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0d0d0d",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "no.datafabric.loft",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "LØFT bruker bildebiblioteket til å velge profilbilde."
+      }
     },
     "android": {
+      "package": "no.datafabric.loft",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0d0d0d",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -20,7 +27,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -28,15 +35,22 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0d0d0d",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LØFT bruker bildebiblioteket til å velge profilbilde."
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": false,
+      "reactCompiler": true,
+      "baseUrl": "/Treningsapp"
     }
   }
 }

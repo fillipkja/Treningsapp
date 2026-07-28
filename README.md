@@ -1,56 +1,71 @@
-# Welcome to your Expo app 👋
+# LØFT 🏋️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+En moderne treningslogg for styrketrening — logg økter, følg utviklingen din med grafer, sett personlige mål og lås opp merker. Bygget med **Expo (React Native) + TypeScript** og kjører på **web, iOS og Android** fra samme kodebase. Mørkt premium-design som standard.
 
-## Get started
+**Alt lagres lokalt på enheten din** (localStorage på web, AsyncStorage på mobil). Ingen konto, ingen server, ingen fiktive data.
 
-1. Install dependencies
+## Bruk den
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+- **Web:** https://fillipkja.github.io/Treningsapp/
+- **Lokalt:**
 
 ```bash
-npm run reset-project
+npm install
+npx expo start        # trykk w (web), i (iOS-simulator) eller a (Android)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Funksjoner
 
-### Other setup steps
+**Logging**
+- Aktiv økt med live-timer, sett/reps/vekt/RPE, oppvarmingssett og hviletimer
+- Automatisk PR-deteksjon (beste vekt og estimert 1RM via Epley) med feiring
+- Egne treningsprogrammer (flere dager) og favorittøkter som startes med ett trykk
+- Øvelsesdatabase med 190+ øvelser (norske navn, instruksjoner, tips) + egne øvelser
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+**Statistikk**
+- Volum- og styrkeutvikling som linjegrafer, økter per uke som stolpediagram
+- Aktivitetskalender (heatmap), streak-teller, favorittøvelser
+- Personlige rekorder per øvelse med historikk
 
-## Learn more
+**Mål og merker**
+- Poengsystem per uke/måned (50 p/økt + 1 p/100 kg volum + 25 p/PR)
+- Personlige utfordringer: antall økter, volum, rekorder eller fullfør et program innen en frist
+- 24 merker (bronse/sølv/gull) for milepæler som «100 økter», «180 kg knebøy» og «30 dager på rad»
 
-To learn more about developing your project with Expo, look at the following resources:
+## Arkitektur
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+src/
+├── app/                  # Skjermer (expo-router, filbasert ruting)
+│   ├── (auth)/           # Velkomst + profiloppsett
+│   ├── (tabs)/           # Hjem, Trening, Statistikk, Mål, Profil
+│   ├── workout/          # Aktiv økt + øktdetalj
+│   ├── exercises/        # Øvelsesbibliotek, detalj, ny øvelse
+│   ├── programs/         # Programdetalj + bygger
+│   ├── challenges/       # Personlige utfordringer
+│   └── settings/         # Innstillinger, rediger profil
+├── components/
+│   ├── ui/               # Designsystem (Button, Card, Sheet, ...)
+│   ├── charts/           # Egne SVG-grafer (LineChart, BarChart, heatmap, StatTile)
+│   ├── workout/          # WorkoutCard, hviletimer, øvelses-editor
+│   └── exercises/        # ExercisePickerSheet
+├── lib/
+│   ├── store/            # Zustand-stores m/ AsyncStorage-persistering
+│   ├── logic/            # Ren forretningslogikk (1RM, PR, poeng, streaks, badges)
+│   ├── data/             # Øvelsesdatabasen
+│   └── format.ts         # Norsk formatering av tall/datoer
+├── theme/                # Fargetokens (mørk/lys), spacing, typografi
+└── types/                # Domenemodellen
+```
 
-## Join the community
+## Deploy av web-versjonen
 
-Join our community of developers creating universal apps.
+```bash
+npx expo export --platform web   # bygger til dist/
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+`dist/` publiseres til GitHub Pages (gh-pages-branch). `experiments.baseUrl` i app.json er satt til `/Treningsapp` for å matche repo-navnet.
+
+## Veien videre
+
+Datamodellen har allerede feltene et sosialt lag trenger (deling, likes, kommentarer, deltakere i utfordringer) — de er bevisst ikke eksponert i UI før en ekte backend (f.eks. Supabase) med ekte brukere er koblet på. Native app-lansering til App Store/Google Play gjøres med EAS (`eas.json` ligger klar).
