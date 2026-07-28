@@ -51,7 +51,7 @@ function Stat({ value, label, onPress }: { value: number; label: string; onPress
 
 export default function ProfilScreen() {
   const router = useRouter();
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
 
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -68,8 +68,8 @@ export default function ProfilScreen() {
       message: 'Er du sikker på at du vil logge ut?',
       confirmLabel: 'Logg ut',
       destructive: true,
-      onConfirm: () => {
-        signOut();
+      onConfirm: async () => {
+        await signOut();
         router.replace('/(auth)/login');
       },
     });
@@ -83,12 +83,24 @@ export default function ProfilScreen() {
       <Animated.View entering={FadeInDown.duration(300)}>
         <Card style={{ alignItems: 'center', gap: spacing.md }}>
           <Avatar name={user.displayName || user.username} color={user.avatarColor} uri={user.avatarUri} size={96} />
-          <View style={{ alignItems: 'center', gap: 2 }}>
+          <View style={{ alignItems: 'center', gap: spacing.xs }}>
             <AppText variant="title" numberOfLines={1}>
               {user.displayName || user.username}
             </AppText>
-            <AppText variant="body" color="muted">
-              @{user.username}
+            <View
+              style={{
+                backgroundColor: colors.accentMuted,
+                borderRadius: radius.full,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 4,
+              }}
+            >
+              <AppText variant="bodyBold" style={{ color: colors.accent }}>
+                @{user.username}
+              </AppText>
+            </View>
+            <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
+              Del brukernavnet ditt så venner kan finne deg
             </AppText>
           </View>
           {user.bio ? (
@@ -134,6 +146,14 @@ export default function ProfilScreen() {
         <Card style={{ marginTop: spacing.lg }} padded={false}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <ListItem
+              title="Venner"
+              subtitle="Finn venner og se treningen deres"
+              icon="people-outline"
+              chevron
+              onPress={() => router.push('/friends')}
+            />
+            <Divider />
+            <ListItem
               title="Merker"
               subtitle={`${formatNumber(earnedBadges.length)} opptjent`}
               icon="ribbon-outline"
@@ -143,7 +163,7 @@ export default function ProfilScreen() {
             <Divider />
             <ListItem
               title="Innstillinger"
-              subtitle="Tema og om appen"
+              subtitle="Deling, tema og konto"
               icon="settings-outline"
               chevron
               onPress={() => router.push('/settings')}

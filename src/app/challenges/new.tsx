@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   AppText,
+  Avatar,
   Button,
   Card,
   Chip,
@@ -13,11 +14,13 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { fetchFriendState } from '@/lib/api/friends';
+import { infoDialog } from '@/lib/dialogs';
 import { useAuthStore } from '@/lib/store/auth';
 import { useChallengeStore } from '@/lib/store/challenges';
 import { useProgramStore } from '@/lib/store/programs';
 import { useTheme } from '@/theme';
-import type { ChallengeType } from '@/types';
+import type { ChallengeType, UserProfile } from '@/types';
 
 const TYPE_OPTIONS: {
   type: ChallengeType;
@@ -67,7 +70,7 @@ const TYPE_OPTIONS: {
 const DURATIONS = [7, 14, 30] as const;
 
 export default function NewChallengeScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   const router = useRouter();
 
   const me = useAuthStore((s) => s.user);
@@ -79,6 +82,40 @@ export default function NewChallengeScreen() {
   const [targetText, setTargetText] = useState('');
   const [programId, setProgramId] = useState<string | undefined>(undefined);
   const [durationDays, setDurationDays] = useState<number>(7);
+  const [creating, setCreating] = useState(false);
+
+  // Venner til deltakervalget (null = laster)
+  const [friends, setFriends] = useState<UserProfile[] | null>(null);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [friendsAttempt, setFriendsAttempt] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const myId = me?.id;
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    fetchFriendState(myId)
+      .then((state) => {
+        if (!cancelled) setFriends(state.friends);
+      })
+      .catch((error) => {
+        if (!cancelled)
+          setFriendsError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId, friendsAttempt]);
+
+  const toggleFriend = (id: string) => {
+    void Haptics.selectionAsync();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const activeOption = TYPE_OPTIONS.find((o) => o.type === type) ?? TYPE_OPTIONS[0];
   const selectedProgram = programs.find((p) => p.id === programId);
@@ -87,23 +124,30 @@ export default function NewChallengeScreen() {
   const canStart =
     !!me &&
     name.trim().length > 0 &&
-    (type === 'program'
-      ? !!selectedProgram
-      : Number.isFinite(parsedTarget) && parsedTarget > 0);
+    (type === 'program' ? !!selectedProgram : Number.isFinite(parsedTarget) && parsedTarget > 0);
 
-  const start = () => {
-    if (!me || !canStart) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const challenge = createChallenge({
-      name: name.trim(),
-      type,
-      // For programutfordringer settes målet automatisk til antall dager i programmet
-      target: type === 'program' ? selectedProgram?.days.length : parsedTarget,
-      durationDays,
-      programId: type === 'program' ? programId : undefined,
-      creatorId: me.id,
-    });
-    router.replace(`/challenges/${challenge.id}`);
+  const start = async () => {
+    if (!me || !canStart || creating) return;
+    setCreating(true);
+    try {
+      const challenge = await createChallenge({
+        name: name.trim(),
+        type,
+        // For programutfordringer settes målet automatisk til antall dager i programmet
+        target: type === 'program' ? selectedProgram?.days.length : parsedTarget,
+        durationDays,
+        programId: type === 'program' ? programId : undefined,
+        participantIds: [...selectedIds],
+      });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace(`/challenges/${challenge.id}`);
+    } catch (error) {
+      setCreating(false);
+      infoDialog(
+        'Kunne ikke starte utfordringen',
+        error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+      );
+    }
   };
 
   return (
@@ -127,7 +171,7 @@ export default function NewChallengeScreen() {
                   <View key={option.type} style={{ flexBasis: '46%', flexGrow: 1 }}>
                     <Card
                       onPress={() => {
-                        Haptics.selectionAsync();
+                        void Haptics.selectionAsync();
                         setType(option.type);
                       }}
                       style={{
@@ -230,13 +274,124 @@ export default function NewChallengeScreen() {
             </View>
           </View>
 
+          {/* Deltakere */}
+          <View style={{ gap: spacing.md }}>
+            <AppText variant="label" color="muted">
+              Utfordre venner (valgfritt)
+            </AppText>
+            {friendsError ? (
+              <View style={{ gap: spacing.sm }}>
+                <AppText variant="caption" color="danger">
+                  {friendsError}
+                </AppText>
+                <Button
+                  title="Prøv igjen"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => {
+                    setFriendsError(null);
+                    setFriends(null);
+                    setFriendsAttempt((n) => n + 1);
+                  }}
+                />
+              </View>
+            ) : friends === null ? (
+              <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+                <ActivityIndicator color={colors.accent} />
+              </View>
+            ) : friends.length === 0 ? (
+              <View style={{ gap: spacing.sm }}>
+                <AppText variant="caption" color="muted">
+                  Du har ingen venner ennå — du kan fint kjøre solo.
+                </AppText>
+                <Button
+                  title="Legg til venner"
+                  icon="person-add-outline"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => router.push('/friends/add')}
+                />
+              </View>
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+                  {friends.map((friend) => {
+                    const selected = selectedIds.has(friend.id);
+                    return (
+                      <Pressable
+                        key={friend.id}
+                        onPress={() => toggleFriend(friend.id)}
+                        style={({ pressed }) => ({
+                          width: 72,
+                          alignItems: 'center',
+                          gap: spacing.xs,
+                          opacity: pressed ? 0.7 : 1,
+                        })}
+                      >
+                        <View
+                          style={{
+                            padding: 3,
+                            borderRadius: radius.full,
+                            borderWidth: 2,
+                            borderColor: selected ? colors.accent : 'transparent',
+                          }}
+                        >
+                          <Avatar
+                            name={friend.displayName}
+                            color={friend.avatarColor}
+                            uri={friend.avatarUri}
+                            size={52}
+                          />
+                          {selected ? (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                right: 0,
+                                width: 22,
+                                height: 22,
+                                borderRadius: radius.full,
+                                backgroundColor: colors.accent,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 2,
+                                borderColor: colors.background,
+                              }}
+                            >
+                              <Ionicons name="checkmark" size={12} color={colors.onAccent} />
+                            </View>
+                          ) : null}
+                        </View>
+                        <AppText
+                          variant="caption"
+                          numberOfLines={1}
+                          style={{ maxWidth: 72, textAlign: 'center' }}
+                        >
+                          {friend.displayName}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <AppText variant="caption" color="muted">
+                  {selectedIds.size === 0
+                    ? 'Ingen valgt — du kjører solo.'
+                    : selectedIds.size === 1
+                      ? '1 venn blir utfordret.'
+                      : `${selectedIds.size} venner blir utfordret.`}
+                </AppText>
+              </View>
+            )}
+          </View>
+
           <Button
             title="Start"
             icon="flash"
             size="lg"
             fullWidth
             disabled={!canStart}
-            onPress={start}
+            loading={creating}
+            onPress={() => void start()}
           />
         </Animated.View>
       </Screen>

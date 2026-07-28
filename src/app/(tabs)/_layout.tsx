@@ -2,15 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useAuthStore } from '@/lib/store/auth';
+import { useBootstrapData } from '@/lib/store/bootstrap';
 import { useTheme } from '@/theme';
 
 export default function TabLayout() {
   const theme = useTheme();
-  const user = useAuthStore((s) => s.user);
-  const isOnboarded = useAuthStore((s) => s.isOnboarded);
+  const status = useAuthStore((s) => s.status);
+  useBootstrapData();
 
-  if (!user) return <Redirect href="/(auth)/login" />;
-  if (!isOnboarded) return <Redirect href="/(auth)/onboarding" />;
+  if (status === 'loading') return null;
+  if (status === 'signedOut') return <Redirect href="/(auth)/login" />;
+  if (status === 'needsOnboarding') return <Redirect href="/(auth)/onboarding" />;
 
   return (
     <Tabs
@@ -55,7 +57,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="konkurranser"
         options={{
-          title: 'Mål',
+          title: 'Konkurrer',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
           ),

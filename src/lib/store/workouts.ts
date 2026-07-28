@@ -1,19 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { deletePRs, fetchMyBadges, fetchMyPRs, insertBadges, upsertPRs } from '@/lib/api/personal';
+import {
+  deleteWorkout as apiDeleteWorkout,
+  fetchMyWorkouts,
+  insertWorkout,
+  setWorkoutShared as apiSetWorkoutShared,
+} from '@/lib/api/workouts';
 import { uid } from '@/lib/ids';
-import { BADGE_DEFS, evaluateNewBadges } from '@/lib/logic/badges';
+import { evaluateNewBadges } from '@/lib/logic/badges';
 import { applyWorkoutPRs } from '@/lib/logic/prs';
 import { completedSetCount, workoutVolume } from '@/lib/logic/workout-math';
 import { useAuthStore } from './auth';
-import { useNotificationStore } from './notifications';
 import type {
   ActiveWorkout,
   EarnedBadge,
   ExercisePR,
   TemplateExercise,
   Workout,
-  WorkoutComment,
   WorkoutExercise,
   WorkoutSet,
 } from '@/types';
@@ -28,11 +33,70 @@ function emptySet(prev?: WorkoutSet): WorkoutSet {
   };
 }
 
+function myUserId(): string {
+  return useAuthStore.getState().user!.id;
+}
+
+/** Sammenlign to PR-er på verdier (ikke referanse) for å finne endrede rader */
+function samePR(a: ExercisePR, b: ExercisePR): boolean {
+  return (
+    a.bestWeightKg === b.bestWeightKg &&
+    a.bestEst1RM === b.bestEst1RM &&
+    a.bestReps === b.bestReps &&
+    a.bestSetVolumeKg === b.bestSetVolumeKg &&
+    a.updatedAt === b.updatedAt &&
+    a.history.length === b.history.length
+  );
+}
+
+/** PR-er i `next` som er nye eller endret i forhold til `prev` */
+function changedPRs(prev: ExercisePR[], next: ExercisePR[]): ExercisePR[] {
+  const prevById = new Map(prev.map((pr) => [pr.exerciseId, pr]));
+  return next.filter((pr) => {
+    const before = prevById.get(pr.exerciseId);
+    return !before || !samePR(before, pr);
+  });
+}
+
+/** Rekorder/merker som ikke kom fram til serveren — forsøkes igjen ved neste synk */
+const pendingPRExerciseIds = new Set<string>();
+const pendingBadgeIds = new Set<string>();
+
+/**
+ * Synker endrede rekorder og nye merker. Kaster ALDRI videre: kalleren har
+ * allerede lagret eller slettet økten på serveren, og en feil her skal ikke se
+ * ut som om hovedoperasjonen mislyktes. Det som ikke kom fram, ligger i
+ * pending-settene og blir med i neste forsøk.
+ */
+async function syncPRsAndBadges(
+  userId: string,
+  prs: ExercisePR[],
+  changedExerciseIds: string[],
+  newBadgeIds: string[],
+): Promise<void> {
+  for (const exerciseId of changedExerciseIds) pendingPRExerciseIds.add(exerciseId);
+  for (const badgeId of newBadgeIds) pendingBadgeIds.add(badgeId);
+  const prsToSync = prs.filter((pr) => pendingPRExerciseIds.has(pr.exerciseId));
+  const badgesToSync = [...pendingBadgeIds];
+  try {
+    await Promise.all([upsertPRs(userId, prsToSync), insertBadges(userId, badgesToSync)]);
+    for (const pr of prsToSync) pendingPRExerciseIds.delete(pr.exerciseId);
+    for (const badgeId of badgesToSync) pendingBadgeIds.delete(badgeId);
+  } catch {
+    // Beholdes i pending-settene og forsøkes på nytt ved neste lagring
+  }
+}
+
 interface WorkoutState {
   workouts: Workout[];
   prs: ExercisePR[];
   earnedBadges: EarnedBadge[];
   active: ActiveWorkout | null;
+  loaded: boolean;
+  loading: boolean;
+
+  /** Henter økter, rekorder og merker fra serveren */
+  load: () => Promise<void>;
 
   startWorkout: (name: string, opts?: { programId?: string; templateId?: string }) => void;
   startFromExercises: (
@@ -47,14 +111,16 @@ interface WorkoutState {
   removeSet: (workoutExerciseId: string, setId: string) => void;
   updateActive: (patch: Partial<Pick<ActiveWorkout, 'name' | 'notes'>>) => void;
   cancelActive: () => void;
-  /** Fullfør økten: beregner volum, rekorder og merker. Returnerer lagret økt. */
-  finishActive: (share: boolean) => Workout | null;
+  /**
+   * Fullfør økten: beregner volum, rekorder og merker klientside, lagrer på
+   * serveren og oppdaterer lokal state. Kaster Error (norsk melding) ved
+   * serverfeil — skjermen fanger og viser den. Returnerer null hvis ingen
+   * fullførte sett.
+   */
+  finishActive: (share: boolean) => Promise<Workout | null>;
 
-  deleteWorkout: (id: string) => void;
-  setWorkoutShared: (id: string, shared: boolean) => void;
-  /** Likes/kommentarer på egne økter (fra simulerte venner eller meg selv) */
-  likeMyWorkout: (workoutId: string, userId: string) => void;
-  commentMyWorkout: (workoutId: string, comment: WorkoutComment) => void;
+  deleteWorkout: (id: string) => Promise<void>;
+  setWorkoutShared: (id: string, shared: boolean) => Promise<void>;
 
   /** Siste økt som inneholdt øvelsen — brukes til å foreslå vekt/reps */
   lastSetsFor: (exerciseId: string) => WorkoutSet[] | undefined;
@@ -67,6 +133,25 @@ export const useWorkoutStore = create<WorkoutState>()(
       prs: [],
       earnedBadges: [],
       active: null,
+      loaded: false,
+      loading: false,
+
+      load: async () => {
+        if (get().loading) return;
+        set({ loading: true });
+        try {
+          const userId = myUserId();
+          const [workouts, prs, earnedBadges] = await Promise.all([
+            fetchMyWorkouts(userId),
+            fetchMyPRs(userId),
+            fetchMyBadges(userId),
+          ]);
+          set({ workouts, prs, earnedBadges, loaded: true, loading: false });
+        } catch (error) {
+          set({ loading: false });
+          throw error;
+        }
+      },
 
       startWorkout: (name, opts) =>
         set({
@@ -180,7 +265,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       cancelActive: () => set({ active: null }),
 
-      finishActive: (share) => {
+      finishActive: async (share) => {
         const state = get();
         const active = state.active;
         if (!active) return null;
@@ -191,6 +276,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           set({ active: null });
           return null;
         }
+        const userId = myUserId();
         const now = new Date();
         const date = now.toISOString();
         const { prs, prSetIds, prExerciseIds } = applyWorkoutPRs(exercises, state.prs, date);
@@ -198,13 +284,18 @@ export const useWorkoutStore = create<WorkoutState>()(
           ...e,
           sets: e.sets.map((st) => (prSetIds.has(st.id) ? { ...st, isPR: true } : st)),
         }));
-        const durationMin = Math.max(
-          1,
-          Math.round((now.getTime() - new Date(active.startedAt).getTime()) / 60_000),
+        const durationMin = Math.min(
+          1440,
+          Math.max(
+            1,
+            Math.round((now.getTime() - new Date(active.startedAt).getTime()) / 60_000),
+          ),
         );
-        const workout: Workout = {
-          id: uid('w'),
-          userId: useAuthStore.getState().user?.id ?? 'me',
+
+        // Lagre økten på serveren først; feiler den beholdes `active` så
+        // brukeren kan prøve igjen. Feil kastes videre til skjermen.
+        const saved = await insertWorkout({
+          userId,
           name: active.name || 'Treningsøkt',
           date,
           startedAt: active.startedAt,
@@ -217,10 +308,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           totalVolumeKg: workoutVolume(flagged),
           totalSets: completedSetCount(flagged),
           prCount: prExerciseIds.length,
-          likes: [],
-          comments: [],
-        };
-        const workouts = [workout, ...state.workouts];
+        });
+
+        // Økten finnes nå på serveren — oppdater lokal state med én gang så
+        // et nytt forsøk ikke kan duplisere den.
+        const workouts = [saved, ...state.workouts];
         const newBadgeIds = evaluateNewBadges(
           { workouts, prs },
           state.earnedBadges.map((b) => b.badgeId),
@@ -231,58 +323,62 @@ export const useWorkoutStore = create<WorkoutState>()(
         ];
         set({ workouts, prs, earnedBadges, active: null });
 
-        const notify = useNotificationStore.getState().add;
-        for (const badgeId of newBadgeIds) {
-          const def = BADGE_DEFS.find((b) => b.id === badgeId);
-          if (def) {
-            notify({
-              type: 'badge',
-              title: 'Nytt merke!',
-              body: `${def.icon} Du låste opp «${def.name}»`,
-              refId: badgeId,
-            });
-          }
-        }
-        return workout;
+        // Synk kun endrede PR-er og nye merker. Feil kastes ikke videre — økten
+        // er lagret, så skjermen skal navigere videre til feiringen.
+        await syncPRsAndBadges(
+          userId,
+          prs,
+          changedPRs(state.prs, prs).map((pr) => pr.exerciseId),
+          newBadgeIds,
+        );
+        return saved;
       },
 
-      deleteWorkout: (id) =>
-        set((s) => {
-          const workouts = s.workouts.filter((w) => w.id !== id);
-          if (workouts.length === s.workouts.length) return s;
-          // Reberegn rekorder kronologisk så slettede økter ikke blir stående som PR
-          let prs: ExercisePR[] = [];
-          for (const w of [...workouts].sort((a, b) => a.date.localeCompare(b.date))) {
-            prs = applyWorkoutPRs(w.exercises, prs, w.date).prs;
-          }
-          return { workouts, prs };
-        }),
+      deleteWorkout: async (id) => {
+        const state = get();
+        const workouts = state.workouts.filter((w) => w.id !== id);
+        if (workouts.length === state.workouts.length) return;
+        // Reberegn rekorder kronologisk så slettede økter ikke blir stående som PR
+        let prs: ExercisePR[] = [];
+        for (const w of [...workouts].sort((a, b) => a.date.localeCompare(b.date))) {
+          prs = applyWorkoutPRs(w.exercises, prs, w.date).prs;
+        }
+        const userId = myUserId();
+        const remaining = new Set(prs.map((pr) => pr.exerciseId));
+        const removedExerciseIds = state.prs
+          .map((pr) => pr.exerciseId)
+          .filter((exerciseId) => !remaining.has(exerciseId));
+        await apiDeleteWorkout(id);
+        // Slettingen lyktes: oppdater lokal state før PR-synken, slik at en feil
+        // i synken ikke vises som «Kunne ikke slette økten».
+        set({ workouts, prs });
+        for (const exerciseId of removedExerciseIds) pendingPRExerciseIds.delete(exerciseId);
+        try {
+          await deletePRs(userId, removedExerciseIds);
+        } catch {
+          // Rekordene ryddes bort ved neste sletting/lasting
+        }
+        await syncPRsAndBadges(
+          userId,
+          prs,
+          changedPRs(state.prs, prs).map((pr) => pr.exerciseId),
+          [],
+        );
+      },
 
-      setWorkoutShared: (id, shared) =>
+      setWorkoutShared: async (id, shared) => {
+        const before = get().workouts;
+        // Optimistisk: trygt å angre ved feil
         set((s) => ({
           workouts: s.workouts.map((w) => (w.id === id ? { ...w, isShared: shared } : w)),
-        })),
-
-      likeMyWorkout: (workoutId, userId) =>
-        set((s) => ({
-          workouts: s.workouts.map((w) =>
-            w.id === workoutId
-              ? {
-                  ...w,
-                  likes: w.likes.includes(userId)
-                    ? w.likes.filter((u) => u !== userId)
-                    : [...w.likes, userId],
-                }
-              : w,
-          ),
-        })),
-
-      commentMyWorkout: (workoutId, comment) =>
-        set((s) => ({
-          workouts: s.workouts.map((w) =>
-            w.id === workoutId ? { ...w, comments: [...w.comments, comment] } : w,
-          ),
-        })),
+        }));
+        try {
+          await apiSetWorkoutShared(id, shared);
+        } catch (error) {
+          set({ workouts: before });
+          throw error;
+        }
+      },
 
       lastSetsFor: (exerciseId) => {
         for (const w of get().workouts) {
@@ -293,8 +389,11 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
     }),
     {
-      name: 'workouts',
+      // Egen nøkkel: den gamle 'workouts'-nøkkelen leses av legacy-migreringen
+      // og skal ikke overskrives. Kun pågående økt persist'es lokalt.
+      name: 'workouts-active',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (s) => ({ active: s.active }),
     },
   ),
 );

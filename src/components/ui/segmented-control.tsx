@@ -36,7 +36,7 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
               borderWidth: active ? StyleSheet.hairlineWidth : 0,
               borderColor: colors.border,
               ...(active && {
-                shadowColor: '#000',
+                shadowColor: colors.shadow,
                 shadowOpacity: isDark ? 0.4 : 0.1,
                 shadowRadius: 4,
                 shadowOffset: { width: 0, height: 2 },

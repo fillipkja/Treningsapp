@@ -38,6 +38,7 @@ export default function NewProgramScreen() {
   const [description, setDescription] = useState('');
   const [days, setDays] = useState<DraftDay[]>([{ id: uid('day'), name: 'Dag 1', exercises: [] }]);
   const [nameError, setNameError] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
 
   const patchDay = (id: string, changes: Partial<DraftDay>) => {
     setDays((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
@@ -53,7 +54,7 @@ export default function NewProgramScreen() {
     setDays((prev) => prev.filter((d) => d.id !== id));
   };
 
-  const save = () => {
+  const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
       setNameError('Gi programmet et navn.');
@@ -70,14 +71,23 @@ export default function NewProgramScreen() {
       infoDialog('Mangler øvelser', 'Programmet må ha minst én dag med minst én øvelse.');
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addProgram({
-      name: trimmed,
-      description: description.trim() || undefined,
-      days: validDays,
-      isFavorite: false,
-    });
-    router.back();
+    setSaving(true);
+    try {
+      await addProgram({
+        name: trimmed,
+        description: description.trim() || undefined,
+        days: validDays,
+        isFavorite: false,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (error) {
+      setSaving(false);
+      infoDialog(
+        'Kunne ikke lagre programmet',
+        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+      );
+    }
   };
 
   return (
@@ -93,6 +103,7 @@ export default function NewProgramScreen() {
             label="Navn"
             placeholder="F.eks. Push Pull Legs"
             value={name}
+            maxLength={80}
             onChangeText={(text) => {
               setName(text);
               if (nameError) setNameError(undefined);
@@ -103,6 +114,7 @@ export default function NewProgramScreen() {
             label="Beskrivelse (valgfritt)"
             placeholder="Hva går programmet ut på?"
             value={description}
+            maxLength={2000}
             onChangeText={setDescription}
             multiline
           />
@@ -144,7 +156,14 @@ export default function NewProgramScreen() {
           <Button title="Legg til dag" icon="add" variant="secondary" fullWidth onPress={addDay} />
 
           <View style={{ marginTop: spacing.sm }}>
-            <Button title="Lagre program" icon="checkmark" size="lg" fullWidth onPress={save} />
+            <Button
+              title="Lagre program"
+              icon="checkmark"
+              size="lg"
+              fullWidth
+              loading={saving}
+              onPress={() => void save()}
+            />
           </View>
         </View>
       </Screen>

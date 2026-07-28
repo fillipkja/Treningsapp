@@ -18,13 +18,14 @@ import {
 import { nb } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BarChart, CalendarHeatmap, LineChart, StatTile } from '@/components/charts';
 import {
   AppText,
+  Button,
   Card,
   Chip,
   Divider,
@@ -87,7 +88,29 @@ export default function StatistikkScreen() {
 
   const workouts = useWorkoutStore((s) => s.workouts);
   const prs = useWorkoutStore((s) => s.prs);
+  const loaded = useWorkoutStore((s) => s.loaded);
+  const loading = useWorkoutStore((s) => s.loading);
+  const loadWorkouts = useWorkoutStore((s) => s.load);
   const customExercises = useExerciseStore((s) => s.customExercises);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Bootstrap-lastingen svelger feil: prøv én gang selv, deretter kun manuelt */
+  const attemptedLoad = useRef(false);
+
+  const loadOnce = () => {
+    setLoadError(null);
+    loadWorkouts().catch((error: unknown) =>
+      setLoadError(error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.'),
+    );
+  };
+
+  useEffect(() => {
+    if (loaded || loading || attemptedLoad.current) return;
+    attemptedLoad.current = true;
+    loadOnce();
+    // loadOnce leser kun stabile referanser
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, loading]);
 
   const [resolution, setResolution] = useState<Resolution>('uker');
   const [heatMonth, setHeatMonth] = useState(() => startOfMonth(new Date()));
@@ -233,6 +256,27 @@ export default function StatistikkScreen() {
     () => [...prs].sort((a, b) => b.bestEst1RM - a.bestEst1RM),
     [prs],
   );
+
+  // Venter på første lasting fra serveren
+  if (!loaded) {
+    return (
+      <Screen>
+        <ScreenHeader title="Statistikk" hideBack />
+        {loadError ? (
+          <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl }}>
+            <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
+              {loadError}
+            </AppText>
+            <Button title="Prøv igjen" variant="secondary" size="sm" onPress={loadOnce} />
+          </View>
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        )}
+      </Screen>
+    );
+  }
 
   if (workouts.length === 0) {
     return (

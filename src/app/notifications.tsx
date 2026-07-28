@@ -1,26 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, SectionList, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 import { AppText, Button, Divider, EmptyState, Screen, ScreenHeader } from '@/components/ui';
+import { infoDialog } from '@/lib/dialogs';
 import { formatTimeAgo } from '@/lib/format';
 import { useNotificationStore } from '@/lib/store/notifications';
 import { useTheme } from '@/theme';
 import type { AppNotification } from '@/types';
 
-// Kun 'badge', 'utfordring' og 'påminnelse' opprettes nå, men gamle lagrede
-// varsler kan ha andre typer — rendring må tåle dem uten å kræsje.
+// Varsler opprettes av triggere på serveren. Databasen kan inneholde typer
+// som ikke finnes i domenetypen (f.eks. 'venn_akseptert') — rendring og
+// navigasjon må tåle ukjente typer uten å kræsje.
 const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   utfordring: 'flag',
   badge: 'ribbon',
   påminnelse: 'alarm',
-  // Historiske typer — kan fortsatt ligge lagret hos brukeren
   venn_pr: 'trophy',
   venn_økt: 'barbell',
   like: 'heart',
   kommentar: 'chatbubble',
   venneforespørsel: 'person-add',
+  venn_akseptert: 'person-add',
 };
 
 const FALLBACK_ICON: keyof typeof Ionicons.glyphMap = 'notifications-outline';
@@ -30,8 +32,25 @@ export default function NotificationsScreen() {
   const router = useRouter();
 
   const notifications = useNotificationStore((s) => s.notifications);
+  const loaded = useNotificationStore((s) => s.loaded);
+  const loading = useNotificationStore((s) => s.loading);
+  const load = useNotificationStore((s) => s.load);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const markRead = useNotificationStore((s) => s.markRead);
+
+  const [loadError, setLoadError] = useState<string | undefined>(undefined);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  useEffect(() => {
+    load().catch((error: Error) => setLoadError(error.message));
+    // Kun ved åpning av skjermen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const retryLoad = () => {
+    setLoadError(undefined);
+    load().catch((error: Error) => setLoadError(error.message));
+  };
 
   const sections = useMemo(() => {
     const fresh = notifications.filter((n) => !n.read);
@@ -44,24 +63,44 @@ export default function NotificationsScreen() {
 
   const hasUnread = notifications.some((n) => !n.read);
 
+  const onMarkAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await markAllRead();
+    } catch (error) {
+      infoDialog('Kunne ikke oppdatere', error instanceof Error ? error.message : undefined);
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
   const openNotification = (n: AppNotification) => {
     Haptics.selectionAsync();
-    markRead(n.id);
-    switch (n.type) {
+    // Optimistisk i store — feiler kallet, reverteres lesestatusen stille
+    markRead(n.id).catch(() => undefined);
+    switch (n.type as string) {
+      case 'venneforespørsel':
+      case 'venn_akseptert':
+        router.push('/friends');
+        break;
+      case 'venn_pr':
+      case 'like':
+      case 'kommentar':
+        if (n.refId) router.push(`/workout/${n.refId}`);
+        break;
       case 'utfordring':
         if (n.refId) router.push(`/challenges/${n.refId}`);
         break;
       case 'badge':
         router.push('/badges');
         break;
-      case 'påminnelse':
-        router.push('/(tabs)/trening');
-        break;
       default:
-        // Historiske varseltyper: ingen navigasjon, kun markert som lest
+        // Ukjent type: kun markert som lest
         break;
     }
   };
+
+  const initialLoading = loading && !loaded;
 
   return (
     <Screen padded={false}>
@@ -70,17 +109,37 @@ export default function NotificationsScreen() {
           title="Varsler"
           right={
             hasUnread ? (
-              <Button title="Merk alt lest" variant="ghost" size="sm" onPress={markAllRead} />
+              <Button
+                title="Merk alt lest"
+                variant="ghost"
+                size="sm"
+                loading={markingAll}
+                onPress={onMarkAllRead}
+              />
             ) : undefined
           }
         />
       </View>
 
-      {notifications.length === 0 ? (
+      {initialLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md }}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <AppText variant="body" color="muted">
+            Henter varsler …
+          </AppText>
+        </View>
+      ) : loadError && notifications.length === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.screen }}>
+          <AppText variant="body" style={{ color: colors.danger, textAlign: 'center' }}>
+            {loadError}
+          </AppText>
+          <Button title="Prøv igjen" variant="secondary" icon="refresh" onPress={retryLoad} />
+        </View>
+      ) : notifications.length === 0 ? (
         <EmptyState
           icon="notifications-off-outline"
           title="Ingen varsler"
-          message="Utfordringer, merker og påminnelser dukker opp her."
+          message="Likes, kommentarer, venneforespørsler og utfordringer dukker opp her."
         />
       ) : (
         <SectionList

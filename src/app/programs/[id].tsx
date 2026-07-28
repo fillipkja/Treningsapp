@@ -1,15 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Button, Card, EmptyState, Screen, ScreenHeader } from '@/components/ui';
-import { confirmDialog } from '@/lib/dialogs';
+import { confirmDialog, infoDialog } from '@/lib/dialogs';
+import { firstParam } from '@/lib/params';
 import { getExerciseById } from '@/lib/store/exercises';
 import { useProgramStore } from '@/lib/store/programs';
 import { useWorkoutStore } from '@/lib/store/workouts';
 import { useTheme } from '@/theme';
 import type { ProgramDay, TemplateExercise } from '@/types';
+
+function feilmelding(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.';
+}
 
 /** «4 × 5–8» eller «3 × 10» */
 function formatSetsReps(exercise: TemplateExercise): string {
@@ -21,16 +26,28 @@ function formatSetsReps(exercise: TemplateExercise): string {
 }
 
 export default function ProgramDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
   const { colors, spacing } = useTheme();
 
   const program = useProgramStore((s) => s.programs.find((p) => p.id === id));
+  const programsLoaded = useProgramStore((s) => s.loaded);
   const toggleProgramFavorite = useProgramStore((s) => s.toggleProgramFavorite);
   const deleteProgram = useProgramStore((s) => s.deleteProgram);
   const startFromExercises = useWorkoutStore((s) => s.startFromExercises);
 
   if (!program) {
+    // Dyplenke: programmene kan fortsatt være på vei inn fra serveren
+    if (!programsLoaded) {
+      return (
+        <Screen>
+          <ScreenHeader title="Program" />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        </Screen>
+      );
+    }
     return (
       <Screen>
         <ScreenHeader title="Program" />
@@ -49,10 +66,14 @@ export default function ProgramDetailScreen() {
       message: `Er du sikker på at du vil slette «${program.name}»?`,
       confirmLabel: 'Slett',
       destructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        deleteProgram(program.id);
-        router.back();
+        try {
+          await deleteProgram(program.id);
+          router.back();
+        } catch (error) {
+          infoDialog('Kunne ikke slette programmet', feilmelding(error));
+        }
       },
     });
   };
@@ -86,7 +107,9 @@ export default function ProgramDetailScreen() {
               hitSlop={8}
               onPress={() => {
                 Haptics.selectionAsync();
-                toggleProgramFavorite(program.id);
+                toggleProgramFavorite(program.id).catch((error: unknown) =>
+                  infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                );
               }}
               style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
             >

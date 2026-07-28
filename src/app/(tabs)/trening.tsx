@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Button, Card, Chip, EmptyState, Screen, ScreenHeader } from '@/components/ui';
-import { confirmDialog } from '@/lib/dialogs';
+import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatRelativeDate, formatTimeAgo, formatVolume } from '@/lib/format';
 import { useProgramStore } from '@/lib/store/programs';
 import { useWorkoutStore } from '@/lib/store/workouts';
@@ -14,6 +15,10 @@ import type { Program, WorkoutTemplate } from '@/types';
 /** Favoritter først, deretter opprinnelig rekkefølge */
 function favoritesFirst<T extends { isFavorite: boolean }>(items: T[]): T[] {
   return [...items].sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite));
+}
+
+function feilmelding(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.';
 }
 
 function SectionHeader({ title, actionTitle, onAction }: { title: string; actionTitle?: string; onAction?: () => void }) {
@@ -71,8 +76,28 @@ export default function TreningScreen() {
 
   const templates = useProgramStore((s) => s.templates);
   const programs = useProgramStore((s) => s.programs);
+  const programsLoaded = useProgramStore((s) => s.loaded);
+  const programsLoading = useProgramStore((s) => s.loading);
+  const loadPrograms = useProgramStore((s) => s.load);
   const toggleTemplateFavorite = useProgramStore((s) => s.toggleTemplateFavorite);
   const toggleProgramFavorite = useProgramStore((s) => s.toggleProgramFavorite);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Bootstrap-lastingen svelger feil: prøv én gang selv, deretter kun manuelt */
+  const attemptedLoad = useRef(false);
+
+  const loadOnce = () => {
+    setLoadError(null);
+    loadPrograms().catch((error: unknown) => setLoadError(feilmelding(error)));
+  };
+
+  useEffect(() => {
+    if (programsLoaded || programsLoading || attemptedLoad.current) return;
+    attemptedLoad.current = true;
+    loadOnce();
+    // loadOnce leser kun stabile referanser
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programsLoaded, programsLoading]);
 
   const history = [...workouts]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -106,6 +131,29 @@ export default function TreningScreen() {
       startFromExercises(template.name, template.exercises, { templateId: template.id });
       router.push('/workout/active');
     });
+
+  // Programmer og maler hentes fra serveren i bootstrap — vent på første lasting
+  if (!programsLoaded) {
+    return (
+      <Screen>
+        <ScreenHeader title="Trening" hideBack />
+        {loadError ? (
+          <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl }}>
+            <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
+              {loadError}
+            </AppText>
+            <Button title="Prøv igjen" variant="secondary" size="sm" onPress={loadOnce} />
+            {/* En tom økt trenger ingen serverdata — skal alltid være mulig */}
+            <Button title="Start tom økt" icon="add" onPress={startEmpty} />
+          </View>
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        )}
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll>
@@ -190,7 +238,11 @@ export default function TreningScreen() {
                   </View>
                   <FavoriteStar
                     isFavorite={template.isFavorite}
-                    onToggle={() => toggleTemplateFavorite(template.id)}
+                    onToggle={() =>
+                      toggleTemplateFavorite(template.id).catch((error: unknown) =>
+                        infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                      )
+                    }
                   />
                   <Button title="Start" size="sm" icon="play" onPress={() => startTemplate(template)} />
                 </View>
@@ -235,7 +287,11 @@ export default function TreningScreen() {
                   </View>
                   <FavoriteStar
                     isFavorite={program.isFavorite}
-                    onToggle={() => toggleProgramFavorite(program.id)}
+                    onToggle={() =>
+                      toggleProgramFavorite(program.id).catch((error: unknown) =>
+                        infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                      )
+                    }
                   />
                 </View>
               </Card>

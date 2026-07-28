@@ -28,8 +28,9 @@ export default function NewTemplateScreen() {
   const [name, setName] = useState('');
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [nameError, setNameError] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
       setNameError('Gi favorittøkten et navn.');
@@ -39,13 +40,22 @@ export default function NewTemplateScreen() {
       infoDialog('Mangler øvelser', 'Legg til minst én øvelse.');
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addTemplate({
-      name: trimmed,
-      exercises: exercises.map(sanitize),
-      isFavorite: true,
-    });
-    router.back();
+    setSaving(true);
+    try {
+      await addTemplate({
+        name: trimmed,
+        exercises: exercises.map(sanitize),
+        isFavorite: true,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (error) {
+      setSaving(false);
+      infoDialog(
+        'Kunne ikke lagre favorittøkten',
+        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+      );
+    }
   };
 
   return (
@@ -61,6 +71,7 @@ export default function NewTemplateScreen() {
             label="Navn"
             placeholder="F.eks. Rask overkropp"
             value={name}
+            maxLength={80}
             onChangeText={(text) => {
               setName(text);
               if (nameError) setNameError(undefined);
@@ -75,7 +86,14 @@ export default function NewTemplateScreen() {
           <TemplateExerciseEditor exercises={exercises} onChange={setExercises} />
 
           <View style={{ marginTop: spacing.sm }}>
-            <Button title="Lagre favorittøkt" icon="checkmark" size="lg" fullWidth onPress={save} />
+            <Button
+              title="Lagre favorittøkt"
+              icon="checkmark"
+              size="lg"
+              fullWidth
+              loading={saving}
+              onPress={() => void save()}
+            />
           </View>
         </View>
       </Screen>

@@ -32,6 +32,8 @@ export interface ThemeColors {
   /** Tab-bar/headerflate */
   chrome: string;
   overlay: string;
+  /** Farge til skygger (iOS shadowColor / web box-shadow) */
+  shadow: string;
 }
 
 export const darkColors: ThemeColors = {
@@ -54,6 +56,7 @@ export const darkColors: ThemeColors = {
   gridline: '#2c2c2a',
   chrome: '#141413',
   overlay: 'rgba(0, 0, 0, 0.6)',
+  shadow: '#000000',
 };
 
 export const lightColors: ThemeColors = {
@@ -76,6 +79,7 @@ export const lightColors: ThemeColors = {
   gridline: '#e1e0d9',
   chrome: '#fcfcfb',
   overlay: 'rgba(0, 0, 0, 0.4)',
+  shadow: '#000000',
 };
 
 /** Kategorifarger til grafer med flere serier (validert rekkefølge — aldri stokk om) */

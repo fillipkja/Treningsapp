@@ -1,14 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
-import { AppText, Card } from '@/components/ui';
+import * as Haptics from 'expo-haptics';
+import { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { AppText, Avatar, Card } from '@/components/ui';
 import { formatDuration, formatKg, formatTimeAgo, formatVolume } from '@/lib/format';
 import { getExerciseById } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
-import type { Workout, WorkoutExercise } from '@/types';
+import type { UserProfile, Workout, WorkoutExercise } from '@/types';
 
 interface WorkoutCardProps {
   workout: Workout;
+  /** Angitt -> forfatter-rad (avatar + navn + tid) øverst i stedet for navn/tid-raden */
+  author?: UserProfile;
+  /** Min bruker-id — brukes til å avgjøre om hjertet er fylt */
+  myUserId?: string;
+  /** Angitt -> like/kommentar-rad nederst */
+  onToggleLike?: () => void;
   onPress?: () => void;
+  onPressComments?: () => void;
 }
 
 const MAX_EXERCISE_LINES = 3;
@@ -28,46 +37,93 @@ function exerciseLine(exercise: WorkoutExercise): string {
   return `${exercise.sets.length} × ${name}${weight}`;
 }
 
-/** Loggført økt — navn, nøkkeltall og øvelser */
-export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
+/** Loggført økt — navn, nøkkeltall og øvelser. Med author/onToggleLike blir den et sosialt feed-kort. */
+export function WorkoutCard({
+  workout,
+  author,
+  myUserId,
+  onToggleLike,
+  onPress,
+  onPressComments,
+}: WorkoutCardProps) {
   const { colors, spacing, radius, typography } = useTheme();
+  const heartScale = useRef(new Animated.Value(1)).current;
 
   const visibleExercises = workout.exercises.slice(0, MAX_EXERCISE_LINES);
   const hiddenCount = workout.exercises.length - visibleExercises.length;
 
+  const liked = !!myUserId && workout.likes.includes(myUserId);
+
+  const handleToggleLike = () => {
+    if (!onToggleLike) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    heartScale.setValue(0.6);
+    Animated.spring(heartScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 14,
+    }).start();
+    onToggleLike();
+  };
+
+  const prBadge =
+    workout.prCount > 0 ? (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          paddingHorizontal: spacing.sm + 2,
+          paddingVertical: spacing.xs,
+          borderRadius: radius.full,
+          borderWidth: 1,
+          borderColor: colors.gold,
+          backgroundColor: colors.surfaceElevated,
+        }}
+      >
+        <Ionicons name="trophy" size={13} color={colors.gold} />
+        <AppText variant="caption" style={{ color: colors.gold, fontWeight: '700' }}>
+          {workout.prCount > 1 ? `${workout.prCount} PR` : 'PR'}
+        </AppText>
+      </View>
+    ) : null;
+
   return (
     <Card onPress={onPress}>
-      {/* Navn + tidspunkt */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <AppText variant="subheading" numberOfLines={1}>
-            {workout.name}
-          </AppText>
-          <AppText variant="caption" color="muted" style={{ marginTop: 2 }}>
-            {formatTimeAgo(workout.date)}
-          </AppText>
-        </View>
-        {workout.prCount > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.xs,
-              paddingHorizontal: spacing.sm + 2,
-              paddingVertical: spacing.xs,
-              borderRadius: radius.full,
-              borderWidth: 1,
-              borderColor: colors.gold,
-              backgroundColor: colors.surfaceElevated,
-            }}
-          >
-            <Ionicons name="trophy" size={13} color={colors.gold} />
-            <AppText variant="caption" style={{ color: colors.gold, fontWeight: '700' }}>
-              {workout.prCount > 1 ? `${workout.prCount} PR` : 'PR'}
+      {author ? (
+        // Forfatter-rad (sosial visning)
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Avatar
+            name={author.displayName || author.username}
+            color={author.avatarColor}
+            uri={author.avatarUri}
+            size={40}
+          />
+          <View style={{ flex: 1 }}>
+            <AppText variant="bodyBold" numberOfLines={1}>
+              {author.displayName || author.username}
+            </AppText>
+            <AppText variant="caption" color="muted" numberOfLines={1} style={{ marginTop: 2 }}>
+              {workout.name} · {formatTimeAgo(workout.date)}
             </AppText>
           </View>
-        )}
-      </View>
+          {prBadge}
+        </View>
+      ) : (
+        // Navn + tidspunkt (ren logg-visning)
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="subheading" numberOfLines={1}>
+              {workout.name}
+            </AppText>
+            <AppText variant="caption" color="muted" style={{ marginTop: 2 }}>
+              {formatTimeAgo(workout.date)}
+            </AppText>
+          </View>
+          {prBadge}
+        </View>
+      )}
 
       {/* Statistikk-rad */}
       <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.lg }}>
@@ -108,6 +164,62 @@ export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
               +{hiddenCount} til
             </AppText>
           )}
+        </View>
+      )}
+
+      {/* Like/kommentar-rad (kun sosial visning) */}
+      {onToggleLike && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xl,
+            marginTop: spacing.md,
+            paddingTop: spacing.md,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.border,
+          }}
+        >
+          <Pressable
+            hitSlop={8}
+            onPress={handleToggleLike}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <Ionicons
+                name={liked ? 'heart' : 'heart-outline'}
+                size={22}
+                color={liked ? colors.accent : colors.textMuted}
+              />
+            </Animated.View>
+            <AppText
+              variant="caption"
+              style={{ color: liked ? colors.accent : colors.textMuted, fontWeight: '600' }}
+            >
+              {workout.likes.length}
+            </AppText>
+          </Pressable>
+          <Pressable
+            hitSlop={8}
+            onPress={onPressComments}
+            disabled={!onPressComments}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color={colors.textMuted} />
+            <AppText variant="caption" color="muted" style={{ fontWeight: '600' }}>
+              {workout.comments.length}
+            </AppText>
+          </Pressable>
         </View>
       )}
     </Card>

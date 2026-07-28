@@ -115,6 +115,7 @@ export default function NewExerciseScreen() {
   const [secondary, setSecondary] = useState<MuscleGroup[]>([]);
   const [instructions, setInstructions] = useState<string[]>(['']);
   const [tips, setTips] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const togglePrimary = (m: MuscleGroup) => {
     Haptics.selectionAsync();
@@ -128,7 +129,7 @@ export default function NewExerciseScreen() {
     setPrimary((prev) => prev.filter((x) => x !== m));
   };
 
-  const save = () => {
+  const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
       setNameError('Gi øvelsen et navn.');
@@ -138,21 +139,30 @@ export default function NewExerciseScreen() {
       infoDialog('Mangler muskelgruppe', 'Velg minst én primærmuskel.');
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addCustomExercise({
-      name: trimmed,
-      primaryMuscles: primary,
-      secondaryMuscles: secondary,
-      equipment,
-      category,
-      instructions: instructions.map((s) => s.trim()).filter((s) => s.length > 0),
-      tips: (() => {
-        const cleaned = tips.map((t) => t.trim()).filter((t) => t.length > 0);
-        return cleaned.length > 0 ? cleaned : undefined;
-      })(),
-      mediaEmoji: emoji,
-    });
-    router.back();
+    setSaving(true);
+    try {
+      await addCustomExercise({
+        name: trimmed,
+        primaryMuscles: primary,
+        secondaryMuscles: secondary,
+        equipment,
+        category,
+        instructions: instructions.map((s) => s.trim()).filter((s) => s.length > 0),
+        tips: (() => {
+          const cleaned = tips.map((t) => t.trim()).filter((t) => t.length > 0);
+          return cleaned.length > 0 ? cleaned : undefined;
+        })(),
+        mediaEmoji: emoji,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (error) {
+      setSaving(false);
+      infoDialog(
+        'Kunne ikke lagre øvelsen',
+        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+      );
+    }
   };
 
   return (
@@ -168,6 +178,7 @@ export default function NewExerciseScreen() {
             label="Navn"
             placeholder="F.eks. Bulgarsk utfall"
             value={name}
+            maxLength={80}
             onChangeText={(text) => {
               setName(text);
               if (nameError) setNameError(undefined);
@@ -310,7 +321,14 @@ export default function NewExerciseScreen() {
             />
           </View>
 
-          <Button title="Lagre øvelse" icon="checkmark" size="lg" fullWidth onPress={save} />
+          <Button
+            title="Lagre øvelse"
+            icon="checkmark"
+            size="lg"
+            fullWidth
+            loading={saving}
+            onPress={() => void save()}
+          />
         </Animated.View>
       </Screen>
     </KeyboardAvoidingView>

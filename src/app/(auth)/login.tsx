@@ -1,59 +1,132 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { AppText, Button, Screen } from '@/components/ui';
+import { AppText, Button, Input, Screen } from '@/components/ui';
 import { useAuthStore } from '@/lib/store/auth';
 import { useTheme } from '@/theme';
 
-/**
- * Velkomstskjerm. Appen er lokal-først: profilen opprettes og lagres kun på
- * denne enheten — ingen konto, ingen server. Ekte innlogging (e-post/Google/
- * Apple) kobles på her når en backend er på plass.
- */
-export default function WelcomeScreen() {
+/** Innlogging med e-post og passord via Supabase. */
+export default function LoginScreen() {
   const { colors, spacing, radius } = useTheme();
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
 
-  const handleStart = () => {
-    signIn('epost');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (loading) return;
+    if (!email.trim() || !password) {
+      setError('Fyll inn e-post og passord.');
+      return;
+    }
+    setLoading(true);
+    setError(undefined);
+    const result = await signIn(email, password);
+    setLoading(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const onboarded = useAuthStore.getState().isOnboarded;
-    router.replace(onboarded ? '/(tabs)' : '/(auth)/onboarding');
+    // index-redirecten ruter videre til onboarding eller tabs
+    router.replace('/');
   };
 
   return (
     <Screen>
-      <View style={{ flex: 1, justifyContent: 'center', gap: spacing.xxl }}>
-        <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: 'center', gap: spacing.md }}>
-          <View
-            style={{
-              width: 88,
-              height: 88,
-              borderRadius: radius.xl,
-              backgroundColor: colors.accentMuted,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <Ionicons name="barbell" size={44} color={colors.accent} />
-          </View>
-          <AppText variant="hero" color="accent">
-            LØFT
-          </AppText>
-          <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-            Loggfør styrkeøktene dine, følg utviklingen med grafer og sett nye personlige rekorder.
-          </AppText>
-        </Animated.View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: spacing.xxl }}
+        >
+          <Animated.View
+            entering={FadeInDown.duration(400)}
+            style={{ alignItems: 'center', gap: spacing.md }}
+          >
+            <View
+              style={{
+                width: 88,
+                height: 88,
+                borderRadius: radius.xl,
+                backgroundColor: colors.accentMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="barbell" size={44} color={colors.accent} />
+            </View>
+            <AppText variant="hero" color="accent">
+              LØFT
+            </AppText>
+            <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+              Logg økter. Følg venner. Sett rekorder.
+            </AppText>
+          </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ gap: spacing.md }}>
-          <Button title="Kom i gang" size="lg" fullWidth onPress={handleStart} />
-          <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            Alt lagres lokalt på enheten din — ingen konto nødvendig.
-          </AppText>
-        </Animated.View>
-      </View>
+          <Animated.View
+            entering={FadeInDown.duration(400).delay(150)}
+            style={{ gap: spacing.lg }}
+          >
+            <Input
+              label="E-post"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (error) setError(undefined);
+              }}
+              placeholder="deg@epost.no"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+            />
+            <Input
+              label="Passord"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (error) setError(undefined);
+              }}
+              placeholder="Passordet ditt"
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="password"
+              onSubmitEditing={handleLogin}
+            />
+            {error ? (
+              <AppText variant="caption" color="danger">
+                {error}
+              </AppText>
+            ) : null}
+            <Button
+              title="Logg inn"
+              size="lg"
+              fullWidth
+              loading={loading}
+              onPress={handleLogin}
+            />
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push('/(auth)/register')}
+              style={({ pressed }) => ({ alignSelf: 'center', opacity: pressed ? 0.7 : 1 })}
+            >
+              <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+                Ny her? <AppText variant="bodyBold" color="accent">Opprett konto</AppText>
+              </AppText>
+            </Pressable>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

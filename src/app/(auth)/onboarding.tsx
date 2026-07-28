@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
@@ -32,8 +31,8 @@ const GOALS: { value: TrainingGoal; label: string; icon: keyof typeof Ionicons.g
 function validateUsername(username: string): string | undefined {
   if (!username) return 'Brukernavn er obligatorisk';
   if (username.length < 3) return 'Brukernavnet må ha minst 3 tegn';
-  if (!USERNAME_RE.test(username))
-    return 'Kun småbokstaver, tall, punktum og understrek';
+  if (username.length > 24) return 'Brukernavnet kan ha maks 24 tegn';
+  if (!USERNAME_RE.test(username)) return 'Kun småbokstaver, tall, punktum og understrek';
   return undefined;
 }
 
@@ -45,55 +44,60 @@ function parseOptionalNumber(value: string): number | undefined {
   return num;
 }
 
+/**
+ * Serverbasert onboarding: profilen opprettes i Supabase via completeOnboarding.
+ * Avatar er farge + initialer — bildeopplasting til server er ikke støttet ennå.
+ */
 export default function OnboardingScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
 
   const [step, setStep] = useState(0);
 
   // Steg 1: identitet
-  const [username, setUsername] = useState(user?.username ?? '');
-  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [usernameError, setUsernameError] = useState<string | undefined>(undefined);
 
-  // Steg 2: avatar
-  const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
-  const [avatarColor, setAvatarColor] = useState<string>(user?.avatarColor ?? avatarColors[0]);
+  // Steg 2: avatarfarge
+  const [avatarColor, setAvatarColor] = useState<string>(avatarColors[0]);
 
-  // Steg 3: kropp
+  // Steg 3: kropp (valgfritt)
   const [heightStr, setHeightStr] = useState('');
   const [weightStr, setWeightStr] = useState('');
 
   // Steg 4: mål
-  const [goal, setGoal] = useState<TrainingGoal | undefined>(user?.goal);
+  const [goal, setGoal] = useState<TrainingGoal | undefined>(undefined);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | undefined>(undefined);
 
   const isLastStep = step === STEP_COUNT - 1;
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setAvatarUri(result.assets[0].uri);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
-  const handleComplete = () => {
-    completeOnboarding({
+  const handleComplete = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError(undefined);
+    const { error } = await completeOnboarding({
       username: username.trim(),
-      displayName: displayName.trim(),
-      avatarUri,
+      displayName: displayName.trim() || username.trim(),
       avatarColor,
       heightCm: parseOptionalNumber(heightStr),
       weightKg: parseOptionalNumber(weightStr),
       goal,
     });
+    setSubmitting(false);
+    if (error) {
+      // Brukernavnfeil (f.eks. «Brukernavnet er opptatt.») vises på riktig steg
+      if (error.includes('Brukernavn')) {
+        setUsernameError(error);
+        setStep(0);
+      } else {
+        setSubmitError(error);
+      }
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/(tabs)');
   };
@@ -105,7 +109,7 @@ export default function OnboardingScreen() {
       if (error) return;
     }
     if (isLastStep) {
-      handleComplete();
+      void handleComplete();
       return;
     }
     Haptics.selectionAsync();
@@ -113,6 +117,7 @@ export default function OnboardingScreen() {
   };
 
   const goBack = () => {
+    if (submitting) return;
     Haptics.selectionAsync();
     setStep((s) => Math.max(0, s - 1));
   };
@@ -127,7 +132,7 @@ export default function OnboardingScreen() {
             <View style={{ gap: theme.spacing.xs }}>
               <AppText variant="title">Velg brukernavn</AppText>
               <AppText variant="body" color="secondary">
-                Dette er navnet ditt i appen.
+                Dette er navnet ditt i appen — venner finner deg med det.
               </AppText>
             </View>
             <Input
@@ -148,9 +153,10 @@ export default function OnboardingScreen() {
               onChangeText={setDisplayName}
               placeholder="f.eks. Ola Nordmann"
               autoComplete="name"
+              maxLength={40}
             />
             <AppText variant="caption" color="muted">
-              Minst 3 tegn. Småbokstaver, tall, punktum og understrek.
+              3–24 tegn. Småbokstaver, tall, punktum og understrek.
             </AppText>
           </View>
         );
@@ -160,62 +166,40 @@ export default function OnboardingScreen() {
             <View style={{ gap: theme.spacing.xs }}>
               <AppText variant="title">Velg avatar</AppText>
               <AppText variant="body" color="secondary">
-                Last opp et bilde, eller velg en farge til initialene dine.
+                Velg en farge til initialene dine.
               </AppText>
             </View>
-            <View style={{ alignItems: 'center', gap: theme.spacing.lg }}>
-              <Avatar name={previewName} color={avatarColor} uri={avatarUri} size={112} />
-              <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-                <Button
-                  title="Velg bilde"
-                  icon="image-outline"
-                  variant="secondary"
-                  onPress={pickImage}
-                />
-                {avatarUri ? (
-                  <Button
-                    title="Fjern bilde"
-                    icon="trash-outline"
-                    variant="ghost"
-                    onPress={() => setAvatarUri(undefined)}
-                  />
-                ) : null}
-              </View>
+            <View style={{ alignItems: 'center' }}>
+              <Avatar name={previewName} color={avatarColor} size={112} />
             </View>
-            <View style={{ gap: theme.spacing.md }}>
-              <AppText variant="label" color="muted">
-                Eller velg en farge
-              </AppText>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
-                {avatarColors.map((color) => {
-                  const selected = !avatarUri && color === avatarColor;
-                  return (
-                    <Pressable
-                      key={color}
-                      onPress={() => {
-                        setAvatarColor(color);
-                        setAvatarUri(undefined);
-                        Haptics.selectionAsync();
-                      }}
-                      style={({ pressed }) => ({
-                        width: 48,
-                        height: 48,
-                        borderRadius: theme.radius.full,
-                        backgroundColor: color,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderWidth: selected ? 3 : 0,
-                        borderColor: theme.colors.textPrimary,
-                        opacity: pressed ? 0.8 : 1,
-                      })}
-                    >
-                      {selected ? (
-                        <Ionicons name="checkmark" size={22} color={theme.colors.onAccent} />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
+              {avatarColors.map((color) => {
+                const selected = color === avatarColor;
+                return (
+                  <Pressable
+                    key={color}
+                    onPress={() => {
+                      setAvatarColor(color);
+                      Haptics.selectionAsync();
+                    }}
+                    style={({ pressed }) => ({
+                      width: 48,
+                      height: 48,
+                      borderRadius: theme.radius.full,
+                      backgroundColor: color,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: selected ? 3 : 0,
+                      borderColor: theme.colors.textPrimary,
+                      opacity: pressed ? 0.8 : 1,
+                    })}
+                  >
+                    {selected ? (
+                      <Ionicons name="checkmark" size={22} color={theme.colors.onAccent} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         );
@@ -276,6 +260,11 @@ export default function OnboardingScreen() {
                 />
               ))}
             </View>
+            {submitError ? (
+              <AppText variant="caption" color="danger">
+                {submitError}
+              </AppText>
+            ) : null}
           </View>
         );
       default:
@@ -316,6 +305,7 @@ export default function OnboardingScreen() {
             onPress={goNext}
             size="lg"
             fullWidth
+            loading={submitting}
             disabled={step === 3 && !goal}
           />
         </View>

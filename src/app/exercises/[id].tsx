@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   CATEGORY_LABELS,
@@ -19,8 +19,9 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
-import { confirmDialog } from '@/lib/dialogs';
+import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatKg, formatNumber, formatRelativeDate, formatShortDate } from '@/lib/format';
+import { firstParam } from '@/lib/params';
 import { bestSet } from '@/lib/logic/workout-math';
 import { useExercise, useExerciseStore } from '@/lib/store/exercises';
 import { useWorkoutStore } from '@/lib/store/workouts';
@@ -33,14 +34,16 @@ interface HistoryRow {
 }
 
 export default function ExerciseDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
 
   const exercise = useExercise(id ?? '');
+  const exercisesLoaded = useExerciseStore((s) => s.loaded);
   const deleteCustomExercise = useExerciseStore((s) => s.deleteCustomExercise);
   const pr = useWorkoutStore((s) => s.prs.find((p) => p.exerciseId === id));
   const workouts = useWorkoutStore((s) => s.workouts);
+  const [deleting, setDeleting] = useState(false);
 
   const history = useMemo<HistoryRow[]>(() => {
     if (!id) return [];
@@ -54,6 +57,17 @@ export default function ExerciseDetailScreen() {
   }, [workouts, id]);
 
   if (!exercise) {
+    // Dyplenke til en egendefinert øvelse: de lastes fra serveren
+    if (!exercisesLoaded) {
+      return (
+        <Screen>
+          <ScreenHeader title="Øvelse" />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        </Screen>
+      );
+    }
     return (
       <Screen>
         <ScreenHeader title="Øvelse" />
@@ -72,10 +86,19 @@ export default function ExerciseDetailScreen() {
       message: `Er du sikker på at du vil slette «${exercise.name}»?`,
       confirmLabel: 'Slett',
       destructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        deleteCustomExercise(exercise.id);
-        router.back();
+        setDeleting(true);
+        try {
+          await deleteCustomExercise(exercise.id);
+          router.back();
+        } catch (error) {
+          setDeleting(false);
+          infoDialog(
+            'Kunne ikke slette øvelsen',
+            error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+          );
+        }
       },
     });
   };
@@ -254,7 +277,14 @@ export default function ExerciseDetailScreen() {
       {/* Slett egen øvelse */}
       {exercise.isCustom ? (
         <View style={{ marginTop: spacing.xl }}>
-          <Button title="Slett øvelse" icon="trash-outline" variant="danger" fullWidth onPress={confirmDelete} />
+          <Button
+            title="Slett øvelse"
+            icon="trash-outline"
+            variant="danger"
+            fullWidth
+            loading={deleting}
+            onPress={confirmDelete}
+          />
         </View>
       ) : null}
     </Screen>

@@ -1,41 +1,69 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
-import { uid } from '@/lib/ids';
-import type { AppNotification, NotificationType } from '@/types';
+import {
+  fetchNotifications,
+  markAllRead as apiMarkAllRead,
+  markRead as apiMarkRead,
+} from '@/lib/api/notifications';
+import { useAuthStore } from './auth';
+import type { AppNotification } from '@/types';
+
+// Varsler opprettes av triggere på serveren (se supabase/migrations/0001_init.sql)
+// — klienten kan bare hente og markere som lest.
 
 interface NotificationState {
   notifications: AppNotification[];
-  add: (n: { type: NotificationType; title: string; body: string; refId?: string }) => void;
-  markAllRead: () => void;
-  markRead: (id: string) => void;
-  clearAll: () => void;
+  loaded: boolean;
+  loading: boolean;
+
+  /** Henter mine varsler fra serveren */
+  load: () => Promise<void>;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }
 
-const MAX_NOTIFICATIONS = 100;
+export const useNotificationStore = create<NotificationState>()((set, get) => ({
+  notifications: [],
+  loaded: false,
+  loading: false,
 
-export const useNotificationStore = create<NotificationState>()(
-  persist(
-    (set) => ({
-      notifications: [],
-      add: (n) =>
-        set((s) => ({
-          notifications: [
-            { ...n, id: uid('ntf'), createdAt: new Date().toISOString(), read: false },
-            ...s.notifications,
-          ].slice(0, MAX_NOTIFICATIONS),
-        })),
-      markAllRead: () =>
-        set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
-      markRead: (id) =>
-        set((s) => ({
-          notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-        })),
-      clearAll: () => set({ notifications: [] }),
-    }),
-    { name: 'notifications', storage: createJSONStorage(() => AsyncStorage) },
-  ),
-);
+  load: async () => {
+    if (get().loading) return;
+    set({ loading: true });
+    try {
+      const notifications = await fetchNotifications();
+      set({ notifications, loaded: true, loading: false });
+    } catch (error) {
+      set({ loading: false });
+      throw error;
+    }
+  },
+
+  markRead: async (id) => {
+    const before = get().notifications;
+    // Optimistisk: trygt å angre ved feil
+    set((s) => ({
+      notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    }));
+    try {
+      await apiMarkRead(id);
+    } catch (error) {
+      set({ notifications: before });
+      throw error;
+    }
+  },
+
+  markAllRead: async () => {
+    const before = get().notifications;
+    // Optimistisk: trygt å angre ved feil
+    set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
+    try {
+      await apiMarkAllRead(useAuthStore.getState().user!.id);
+    } catch (error) {
+      set({ notifications: before });
+      throw error;
+    }
+  },
+}));
 
 export function useUnreadCount(): number {
   return useNotificationStore((s) => s.notifications.filter((n) => !n.read).length);

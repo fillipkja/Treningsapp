@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -17,6 +18,7 @@ import { findExercise } from '@/lib/data/exercises';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatDuration, formatKg, formatVolume } from '@/lib/format';
 import { completedSetCount, workoutVolume } from '@/lib/logic/workout-math';
+import { useAuthStore } from '@/lib/store/auth';
 import { useExerciseStore } from '@/lib/store/exercises';
 import { useWorkoutStore } from '@/lib/store/workouts';
 import { useTheme } from '@/theme';
@@ -322,12 +324,15 @@ export default function ActiveWorkoutScreen() {
   const updateActive = useWorkoutStore((s) => s.updateActive);
   const updateSet = useWorkoutStore((s) => s.updateSet);
   const addExerciseToActive = useWorkoutStore((s) => s.addExerciseToActive);
+  const user = useAuthStore((s) => s.user);
 
   const [editingName, setEditingName] = useState(false);
   const nameDraft = useRef('');
   const [pickerVisible, setPickerVisible] = useState(false);
   const [rpeTarget, setRpeTarget] = useState<{ weId: string; set: WorkoutSet } | null>(null);
   const [finishVisible, setFinishVisible] = useState(false);
+  const [share, setShare] = useState(user?.shareWorkouts ?? true);
+  const [saving, setSaving] = useState(false);
   const [autoRest, setAutoRest] = useState(true);
   const restTimerRef = useRef<RestTimerHandle>(null);
 
@@ -376,18 +381,32 @@ export default function ActiveWorkoutScreen() {
       infoDialog('Ingen fullførte sett', 'Fullfør minst ett sett før du lagrer økten.');
       return;
     }
+    setShare(user?.shareWorkouts ?? true);
     setFinishVisible(true);
   };
 
-  const onSave = () => {
-    setFinishVisible(false);
-    const workout = finishActive(true);
-    if (!workout) {
-      router.back();
-      return;
+  const onSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const workout = await finishActive(share);
+      setSaving(false);
+      setFinishVisible(false);
+      if (!workout) {
+        router.back();
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace(`/workout/${workout.id}?celebrate=1`);
+    } catch (error) {
+      // finishActive kaster kun hvis selve lagringen feilet — økten beholdes
+      // da som aktiv, så brukeren kan prøve igjen (PR/merke-synk kaster ikke)
+      setSaving(false);
+      infoDialog(
+        'Kunne ikke lagre økten',
+        error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+      );
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace(`/workout/${workout.id}?celebrate=1`);
   };
 
   const durationMin = Math.max(
@@ -428,6 +447,7 @@ export default function ActiveWorkoutScreen() {
             <Input
               autoFocus
               defaultValue={active.name}
+              maxLength={80}
               onChangeText={(t) => {
                 nameDraft.current = t;
               }}
@@ -516,6 +536,7 @@ export default function ActiveWorkoutScreen() {
             label="Notater"
             placeholder="Hvordan gikk økten?"
             defaultValue={active.notes}
+            maxLength={2000}
             onChangeText={(t) => updateActive({ notes: t })}
             multiline
             style={{ minHeight: 80, textAlignVertical: 'top' }}
@@ -592,7 +613,13 @@ export default function ActiveWorkoutScreen() {
       </Sheet>
 
       {/* Fullfør-oppsummering */}
-      <Sheet visible={finishVisible} onClose={() => setFinishVisible(false)} title="Fullfør økt">
+      <Sheet
+        visible={finishVisible}
+        onClose={() => {
+          if (!saving) setFinishVisible(false);
+        }}
+        title="Fullfør økt"
+      >
         <View style={{ gap: spacing.lg }}>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {[
@@ -620,7 +647,27 @@ export default function ActiveWorkoutScreen() {
             ))}
           </View>
 
-          <Button title="Lagre økt" fullWidth size="lg" onPress={onSave} />
+          <Pressable
+            disabled={saving}
+            onPress={() => setShare((v) => !v)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
+          >
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyBold">Del med venner</AppText>
+              <AppText variant="caption" color="muted">
+                Økten vises i feeden til vennene dine.
+              </AppText>
+            </View>
+            <Switch
+              value={share}
+              onValueChange={setShare}
+              disabled={saving}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              ios_backgroundColor={colors.border}
+            />
+          </Pressable>
+
+          <Button title="Lagre økt" fullWidth size="lg" loading={saving} onPress={onSave} />
         </View>
       </Sheet>
     </Screen>
