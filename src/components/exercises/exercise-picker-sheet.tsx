@@ -4,75 +4,75 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText, Button, Chip, Divider, EmptyState, Input, Sheet } from '@/components/ui';
+import { ExerciseTile } from '@/components/exercises/exercise-tile';
+import { useLanguage, useT } from '@/i18n';
+import { ALL_MUSCLES, equipmentLabel, muscleLabel } from '@/i18n/labels';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
+import type { AppLanguage } from '@/lib/store/settings';
 import { useAllExercises } from '@/lib/store/exercises';
-import { useTheme } from '@/theme';
-import type { Equipment, Exercise, ExerciseCategory, MuscleGroup } from '@/types';
+import { muscleColors, useTheme } from '@/theme';
+import type { Exercise, MuscleGroup } from '@/types';
 
-/** Alle muskelgrupper i visningsrekkefølge (brukes også av bibliotek-skjermen) */
-export const MUSCLE_GROUPS: MuscleGroup[] = [
-  'bryst',
-  'rygg',
-  'skuldre',
-  'biceps',
-  'triceps',
-  'underarmer',
-  'mage',
-  'quads',
-  'hamstrings',
-  'setemuskler',
-  'legger',
-  'korsrygg',
-  'helkropp',
-];
-
-export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
-  bryst: 'Bryst',
-  rygg: 'Rygg',
-  skuldre: 'Skuldre',
-  biceps: 'Biceps',
-  triceps: 'Triceps',
-  underarmer: 'Underarmer',
-  mage: 'Mage',
-  quads: 'Quads',
-  hamstrings: 'Hamstrings',
-  setemuskler: 'Setemuskler',
-  legger: 'Legger',
-  korsrygg: 'Korsrygg',
-  helkropp: 'Helkropp',
-};
-
-export const EQUIPMENT_LABELS: Record<Equipment, string> = {
-  stang: 'Stang',
-  manualer: 'Manualer',
-  maskin: 'Maskin',
-  kabel: 'Kabel',
-  kroppsvekt: 'Kroppsvekt',
-  kettlebell: 'Kettlebell',
-  strikk: 'Strikk',
-  annet: 'Annet',
-};
-
-export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
-  styrke: 'Styrke',
-  kondisjon: 'Kondisjon',
-  mobilitet: 'Mobilitet',
-};
-
-/** Felles filter for picker og bibliotek: fritekst på norsk/engelsk navn + primærmuskel */
+/** Felles filter for picker og bibliotek: fritekst på norsk/engelsk navn + primærmuskel.
+ *  Resultatet sorteres på visningsnavnet for aktivt språk. */
 export function filterExercises(
   exercises: Exercise[],
   query: string,
   muscle: MuscleGroup | null,
+  lang: AppLanguage,
 ): Exercise[] {
   const q = query.trim().toLowerCase();
-  return exercises.filter((e) => {
-    if (muscle && !e.primaryMuscles.includes(muscle)) return false;
-    if (!q) return true;
-    return (
-      e.name.toLowerCase().includes(q) ||
-      (e.englishName?.toLowerCase().includes(q) ?? false)
+  return exercises
+    .filter((e) => {
+      if (muscle && !e.primaryMuscles.includes(muscle)) return false;
+      if (!q) return true;
+      return (
+        e.name.toLowerCase().includes(q) ||
+        (e.englishName?.toLowerCase().includes(q) ?? false)
+      );
+    })
+    .sort((a, b) =>
+      exerciseDisplayName(a, lang).localeCompare(exerciseDisplayName(b, lang), lang),
     );
-  });
+}
+
+/** Chip i muskelgruppens identitetsfarge: valgt = farget tekst/border på muted bakgrunn */
+export function MuscleChip({
+  muscle,
+  selected = false,
+  onPress,
+}: {
+  muscle: MuscleGroup;
+  selected?: boolean;
+  onPress?: () => void;
+}) {
+  const { colors, radius, spacing, isDark } = useTheme();
+  const lang = useLanguage();
+  const color = muscleColors[isDark ? 'dark' : 'light'][muscle];
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => ({
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm - 1,
+        borderRadius: radius.full,
+        backgroundColor: selected ? color + '29' : colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: selected ? color : colors.border,
+        opacity: pressed ? 0.8 : 1,
+        alignSelf: 'flex-start',
+      })}
+    >
+      <AppText
+        variant="caption"
+        style={{ color: selected ? color : colors.textSecondary, fontWeight: '600' }}
+      >
+        {muscleLabel(muscle, lang)}
+      </AppText>
+    </Pressable>
+  );
 }
 
 /** Horisontal chip-rad med «Alle» + alle muskelgrupper */
@@ -84,6 +84,7 @@ export function MuscleFilterChips({
   onChange: (muscle: MuscleGroup | null) => void;
 }) {
   const { spacing } = useTheme();
+  const t = useT();
   return (
     <ScrollView
       horizontal
@@ -91,17 +92,17 @@ export function MuscleFilterChips({
       contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.xs }}
     >
       <Chip
-        label="Alle"
+        label={t('exercises.filterAll')}
         selected={selected === null}
         onPress={() => {
           Haptics.selectionAsync();
           onChange(null);
         }}
       />
-      {MUSCLE_GROUPS.map((m) => (
-        <Chip
+      {ALL_MUSCLES.map((m) => (
+        <MuscleChip
           key={m}
-          label={MUSCLE_LABELS[m]}
+          muscle={m}
           selected={selected === m}
           onPress={() => {
             Haptics.selectionAsync();
@@ -113,7 +114,7 @@ export function MuscleFilterChips({
   );
 }
 
-/** Rad i øvelseslister: emoji-rute, navn, muskler + utstyr, «Egen»-merke */
+/** Rad i øvelseslister: farget flis, navn, muskler + utstyr, «Egen»-merke */
 export function ExerciseRow({
   exercise,
   onPress,
@@ -124,10 +125,12 @@ export function ExerciseRow({
   chevron?: boolean;
 }) {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
 
   const subtitle = [
-    exercise.primaryMuscles.map((m) => MUSCLE_LABELS[m]).join(', '),
-    EQUIPMENT_LABELS[exercise.equipment],
+    exercise.primaryMuscles.map((m) => muscleLabel(m, lang)).join(', '),
+    equipmentLabel(exercise.equipment, lang),
   ].join(' · ');
 
   return (
@@ -135,23 +138,10 @@ export function ExerciseRow({
       onPress={onPress}
       style={({ pressed }) => [styles.row, { gap: spacing.md, paddingVertical: spacing.md, opacity: pressed ? 0.7 : 1 }]}
     >
-      <View
-        style={{
-          width: 46,
-          height: 46,
-          borderRadius: radius.md,
-          backgroundColor: colors.surfaceElevated,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <AppText style={{ fontSize: 24, lineHeight: 30 }}>{exercise.mediaEmoji}</AppText>
-      </View>
+      <ExerciseTile exercise={exercise} size={46} />
       <View style={{ flex: 1, gap: 2 }}>
         <AppText variant="bodyBold" numberOfLines={1}>
-          {exercise.name}
+          {exerciseDisplayName(exercise, lang)}
         </AppText>
         <AppText variant="caption" color="muted" numberOfLines={1}>
           {subtitle}
@@ -167,7 +157,7 @@ export function ExerciseRow({
           }}
         >
           <AppText variant="caption" color="accent" style={{ fontWeight: '600' }}>
-            Egen
+            {t('exercises.customBadge')}
           </AppText>
         </View>
       ) : null}
@@ -186,14 +176,16 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
   const router = useRouter();
   const { spacing } = useTheme();
   const { height } = useWindowDimensions();
+  const t = useT();
+  const lang = useLanguage();
   const exercises = useAllExercises();
 
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
 
   const filtered = useMemo(
-    () => filterExercises(exercises, query, muscle),
-    [exercises, query, muscle],
+    () => filterExercises(exercises, query, muscle, lang),
+    [exercises, query, muscle, lang],
   );
 
   const handleSelect = (exercise: Exercise) => {
@@ -208,10 +200,10 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Velg øvelse">
+    <Sheet visible={visible} onClose={onClose} title={t('exercises.pickerTitle')}>
       <View style={{ gap: spacing.sm }}>
         <Input
-          placeholder="Søk etter øvelse …"
+          placeholder={t('exercises.searchPlaceholder')}
           value={query}
           onChangeText={setQuery}
           autoCorrect={false}
@@ -230,13 +222,13 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
           ListEmptyComponent={
             <EmptyState
               icon="search-outline"
-              title="Ingen treff"
-              message="Prøv et annet søkeord eller fjern filteret."
+              title={t('exercises.noResultsTitle')}
+              message={t('exercises.noResultsMessage')}
             />
           }
         />
         <Button
-          title="Lag egen øvelse"
+          title={t('exercises.createCustom')}
           icon="add"
           variant="secondary"
           fullWidth

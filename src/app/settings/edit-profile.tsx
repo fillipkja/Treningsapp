@@ -13,16 +13,13 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { goalLabel } from '@/i18n/labels';
 import { useAuthStore } from '@/lib/store/auth';
 import { avatarColors, useTheme } from '@/theme';
 import type { TrainingGoal } from '@/types';
 
-const GOAL_OPTIONS: { value: TrainingGoal; label: string }[] = [
-  { value: 'styrke', label: 'Styrke 🏋️' },
-  { value: 'muskelvekst', label: 'Muskelvekst 💪' },
-  { value: 'utholdenhet', label: 'Utholdenhet 🏃' },
-  { value: 'helse', label: 'Helse 🌱' },
-];
+const GOAL_VALUES: TrainingGoal[] = ['styrke', 'muskelvekst', 'utholdenhet', 'helse'];
 
 /**
  * "182" / "82,5" -> tall. Tomt felt -> null (nullstiller kolonnen), mens
@@ -36,6 +33,8 @@ function parseMeasure(value: string): number | null | undefined {
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
   const { colors, spacing, radius } = useTheme();
 
   const user = useAuthStore((s) => s.user);
@@ -59,7 +58,7 @@ export default function EditProfileScreen() {
   const save = async () => {
     const cleanUsername = username.trim().toLowerCase().replace(/^@/, '');
     if (cleanUsername.length < 3) {
-      setUsernameError('Brukernavnet må ha minst 3 tegn');
+      setUsernameError(t('profile.usernameTooShort'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
@@ -92,7 +91,7 @@ export default function EditProfileScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen scroll>
-        <ScreenHeader title="Rediger profil" />
+        <ScreenHeader title={t('profile.editProfile')} />
 
         {/* Avatar */}
         <Animated.View entering={FadeInDown.duration(300)}>
@@ -103,7 +102,7 @@ export default function EditProfileScreen() {
               size={96}
             />
             <AppText variant="caption" color="muted">
-              Velg en farge til avataren din
+              {t('profile.avatarColorHint')}
             </AppText>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               {avatarColors.map((color) => {
@@ -135,31 +134,31 @@ export default function EditProfileScreen() {
         <Animated.View entering={FadeInDown.delay(60).duration(300)}>
           <Card style={{ marginTop: spacing.lg, gap: spacing.lg }}>
             <Input
-              label="Visningsnavn"
+              label={t('profile.displayName')}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="Ola Nordmann"
+              placeholder={t('profile.displayNamePlaceholder')}
               autoCapitalize="words"
               maxLength={40}
             />
             <Input
-              label="Brukernavn"
+              label={t('profile.username')}
               value={username}
-              onChangeText={(t) => {
-                setUsername(t);
+              onChangeText={(text) => {
+                setUsername(text);
                 if (usernameError) setUsernameError(undefined);
                 if (saveError) setSaveError(undefined);
               }}
-              placeholder="olanordmann"
+              placeholder={t('profile.usernamePlaceholder')}
               autoCapitalize="none"
               autoCorrect={false}
               error={usernameError}
             />
             <Input
-              label="Bio"
+              label={t('profile.bio')}
               value={bio}
               onChangeText={setBio}
-              placeholder="Fortell litt om deg selv og treningen din"
+              placeholder={t('profile.bioPlaceholder')}
               maxLength={200}
               multiline
               numberOfLines={3}
@@ -168,7 +167,7 @@ export default function EditProfileScreen() {
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <View style={{ flex: 1 }}>
                 <Input
-                  label="Høyde (cm)"
+                  label={t('profile.heightLabel')}
                   value={heightCm}
                   onChangeText={setHeightCm}
                   placeholder="180"
@@ -177,7 +176,7 @@ export default function EditProfileScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Input
-                  label="Vekt (kg)"
+                  label={t('profile.weightLabel')}
                   value={weightKg}
                   onChangeText={setWeightKg}
                   placeholder="80"
@@ -192,17 +191,17 @@ export default function EditProfileScreen() {
         <Animated.View entering={FadeInDown.delay(120).duration(300)}>
           <Card style={{ marginTop: spacing.lg, gap: spacing.md }}>
             <AppText variant="label" color="muted">
-              Treningsmål
+              {t('profile.trainingGoal')}
             </AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-              {GOAL_OPTIONS.map((option) => (
+              {GOAL_VALUES.map((value) => (
                 <Chip
-                  key={option.value}
-                  label={option.label}
-                  selected={goal === option.value}
+                  key={value}
+                  label={goalLabel(value, lang)}
+                  selected={goal === value}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    setGoal(option.value);
+                    setGoal(value);
                   }}
                 />
               ))}
@@ -216,7 +215,7 @@ export default function EditProfileScreen() {
               {saveError}
             </AppText>
           ) : null}
-          <Button title="Lagre" icon="checkmark" size="lg" fullWidth loading={saving} onPress={save} />
+          <Button title={t('common.save')} icon="checkmark" size="lg" fullWidth loading={saving} onPress={save} />
         </Animated.View>
       </Screen>
     </KeyboardAvoidingView>

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Button, Input, Screen } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth';
 import { useTheme } from '@/theme';
 
@@ -19,6 +21,7 @@ interface FieldErrors {
 /** Registrering med e-post og passord via Supabase. */
 export default function RegisterScreen() {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
   const router = useRouter();
   const signUp = useAuthStore((s) => s.signUp);
 
@@ -32,11 +35,11 @@ export default function RegisterScreen() {
 
   const validate = (): boolean => {
     const errors: FieldErrors = {};
-    if (!email.trim()) errors.email = 'E-post er obligatorisk';
-    else if (!EMAIL_RE.test(email.trim())) errors.email = 'Skriv inn en gyldig e-postadresse';
-    if (!password) errors.password = 'Passord er obligatorisk';
-    else if (password.length < 6) errors.password = 'Passordet må ha minst 6 tegn';
-    if (confirm !== password) errors.confirm = 'Passordene er ikke like';
+    if (!email.trim()) errors.email = t('auth.emailRequired');
+    else if (!EMAIL_RE.test(email.trim())) errors.email = t('error.invalidEmail');
+    if (!password) errors.password = t('auth.passwordRequired');
+    else if (password.length < 6) errors.password = t('error.passwordTooShort');
+    if (confirm !== password) errors.confirm = t('auth.passwordsDontMatch');
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -82,16 +85,15 @@ export default function RegisterScreen() {
               <Ionicons name="mail-unread-outline" size={44} color={colors.accent} />
             </View>
             <AppText variant="title" style={{ textAlign: 'center' }}>
-              Sjekk e-posten din 📬
+              {t('auth.checkEmailTitle')}
             </AppText>
             <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              Vi har sendt en lenke til {email.trim()}. Klikk lenken for å aktivere kontoen, kom så
-              tilbake og logg inn.
+              {t('auth.checkEmailBody', { email: email.trim() })}
             </AppText>
           </Animated.View>
           <Animated.View entering={FadeInDown.duration(400).delay(150)}>
             <Button
-              title="Til innlogging"
+              title={t('auth.toLogin')}
               size="lg"
               fullWidth
               onPress={() => router.replace('/(auth)/login')}
@@ -117,21 +119,23 @@ export default function RegisterScreen() {
             entering={FadeInDown.duration(400)}
             style={{ alignItems: 'center', gap: spacing.md }}
           >
-            <View
+            <LinearGradient
+              colors={colors.gradientAccent}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
                 width: 88,
                 height: 88,
                 borderRadius: radius.xl,
-                backgroundColor: colors.accentMuted,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="barbell" size={44} color={colors.accent} />
-            </View>
-            <AppText variant="title">Opprett konto</AppText>
+              <Ionicons name="barbell" size={44} color={colors.onAccent} />
+            </LinearGradient>
+            <AppText variant="title">{t('auth.createAccount')}</AppText>
             <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              Logg økter. Følg venner. Sett rekorder.
+              {t('auth.tagline')}
             </AppText>
           </Animated.View>
 
@@ -140,7 +144,7 @@ export default function RegisterScreen() {
             style={{ gap: spacing.lg }}
           >
             <Input
-              label="E-post"
+              label={t('auth.emailLabel')}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -148,14 +152,14 @@ export default function RegisterScreen() {
                 if (serverError) setServerError(undefined);
               }}
               error={fieldErrors.email}
-              placeholder="deg@epost.no"
+              placeholder={t('auth.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
             />
             <Input
-              label="Passord"
+              label={t('auth.passwordLabel')}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -163,13 +167,13 @@ export default function RegisterScreen() {
                 if (serverError) setServerError(undefined);
               }}
               error={fieldErrors.password}
-              placeholder="Minst 6 tegn"
+              placeholder={t('auth.passwordPlaceholderNew')}
               secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
             />
             <Input
-              label="Gjenta passord"
+              label={t('auth.confirmPasswordLabel')}
               value={confirm}
               onChangeText={(text) => {
                 setConfirm(text);
@@ -177,7 +181,7 @@ export default function RegisterScreen() {
                 if (serverError) setServerError(undefined);
               }}
               error={fieldErrors.confirm}
-              placeholder="Samme passord en gang til"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
               secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
@@ -189,7 +193,7 @@ export default function RegisterScreen() {
               </AppText>
             ) : null}
             <Button
-              title="Opprett konto"
+              title={t('auth.createAccount')}
               size="lg"
               fullWidth
               loading={loading}
@@ -201,7 +205,10 @@ export default function RegisterScreen() {
               style={({ pressed }) => ({ alignSelf: 'center', opacity: pressed ? 0.7 : 1 })}
             >
               <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                Har du konto? <AppText variant="bodyBold" color="accent">Logg inn</AppText>
+                {t('auth.haveAccountPrompt')}{' '}
+                <AppText variant="bodyBold" color="accent">
+                  {t('auth.signIn')}
+                </AppText>
               </AppText>
             </Pressable>
           </Animated.View>

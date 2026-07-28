@@ -53,3 +53,4 @@ export const ThemeContext = createContext<Theme>(darkTheme);
 export function useTheme(): Theme {
   return useContext(ThemeContext);
 }
+export { challengeTypeColors, muscleColors, tierColors } from './colors';

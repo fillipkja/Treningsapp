@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { TemplateExerciseEditor } from '@/components/workout/template-exercise-editor';
 import { AppText, Button, Card, Input, Screen, ScreenHeader } from '@/components/ui';
+import { useT } from '@/i18n';
 import { infoDialog } from '@/lib/dialogs';
 import { uid } from '@/lib/ids';
 import { useProgramStore } from '@/lib/store/programs';
@@ -31,12 +32,15 @@ function sanitize(exercise: TemplateExercise): TemplateExercise {
 
 export default function NewProgramScreen() {
   const router = useRouter();
+  const t = useT();
   const { colors, spacing } = useTheme();
   const addProgram = useProgramStore((s) => s.addProgram);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [days, setDays] = useState<DraftDay[]>([{ id: uid('day'), name: 'Dag 1', exercises: [] }]);
+  const [days, setDays] = useState<DraftDay[]>(() => [
+    { id: uid('day'), name: t('training.dayN', { n: 1 }), exercises: [] },
+  ]);
   const [nameError, setNameError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
@@ -46,7 +50,10 @@ export default function NewProgramScreen() {
 
   const addDay = () => {
     Haptics.selectionAsync();
-    setDays((prev) => [...prev, { id: uid('day'), name: `Dag ${prev.length + 1}`, exercises: [] }]);
+    setDays((prev) => [
+      ...prev,
+      { id: uid('day'), name: t('training.dayN', { n: prev.length + 1 }), exercises: [] },
+    ]);
   };
 
   const removeDay = (id: string) => {
@@ -57,18 +64,18 @@ export default function NewProgramScreen() {
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError('Gi programmet et navn.');
+      setNameError(t('training.programNameRequired'));
       return;
     }
     const validDays = days
       .filter((d) => d.exercises.length > 0)
       .map((d) => ({
         id: d.id,
-        name: d.name.trim() || 'Dag',
+        name: d.name.trim() || t('training.dayFallback'),
         exercises: d.exercises.map(sanitize),
       }));
     if (validDays.length === 0) {
-      infoDialog('Mangler øvelser', 'Programmet må ha minst én dag med minst én øvelse.');
+      infoDialog(t('training.missingExercisesTitle'), t('training.programNeedsExercises'));
       return;
     }
     setSaving(true);
@@ -84,8 +91,8 @@ export default function NewProgramScreen() {
     } catch (error) {
       setSaving(false);
       infoDialog(
-        'Kunne ikke lagre programmet',
-        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+        t('training.saveProgramError'),
+        error instanceof Error && error.message ? error.message : t('error.generic'),
       );
     }
   };
@@ -96,12 +103,12 @@ export default function NewProgramScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen scroll>
-        <ScreenHeader title="Nytt program" />
+        <ScreenHeader title={t('training.newProgram')} />
 
         <View style={{ gap: spacing.lg }}>
           <Input
-            label="Navn"
-            placeholder="F.eks. Push Pull Legs"
+            label={t('training.nameLabel')}
+            placeholder={t('training.programNamePlaceholder')}
             value={name}
             maxLength={80}
             onChangeText={(text) => {
@@ -111,8 +118,8 @@ export default function NewProgramScreen() {
             error={nameError}
           />
           <Input
-            label="Beskrivelse (valgfritt)"
-            placeholder="Hva går programmet ut på?"
+            label={t('training.descriptionLabel')}
+            placeholder={t('training.descriptionPlaceholder')}
             value={description}
             maxLength={2000}
             onChangeText={setDescription}
@@ -120,7 +127,7 @@ export default function NewProgramScreen() {
           />
 
           <AppText variant="heading" style={{ marginTop: spacing.sm }}>
-            Dager
+            {t('training.daysSection')}
           </AppText>
 
           {days.map((day, index) => (
@@ -129,8 +136,8 @@ export default function NewProgramScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md }}>
                   <View style={{ flex: 1 }}>
                     <Input
-                      label={`Dag ${index + 1}`}
-                      placeholder="F.eks. Push"
+                      label={t('training.dayN', { n: index + 1 })}
+                      placeholder={t('training.dayNamePlaceholder')}
                       value={day.name}
                       onChangeText={(text) => patchDay(day.id, { name: text })}
                     />
@@ -153,11 +160,11 @@ export default function NewProgramScreen() {
             </Animated.View>
           ))}
 
-          <Button title="Legg til dag" icon="add" variant="secondary" fullWidth onPress={addDay} />
+          <Button title={t('training.addDay')} icon="add" variant="secondary" fullWidth onPress={addDay} />
 
           <View style={{ marginTop: spacing.sm }}>
             <Button
-              title="Lagre program"
+              title={t('training.saveProgram')}
               icon="checkmark"
               size="lg"
               fullWidth

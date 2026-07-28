@@ -14,63 +14,63 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { t as translate, useLanguage, useT, type TranslationKey } from '@/i18n';
+import { challengeTypeLabel } from '@/i18n/labels';
 import { fetchFriendState } from '@/lib/api/friends';
 import { infoDialog } from '@/lib/dialogs';
 import { useAuthStore } from '@/lib/store/auth';
 import { useChallengeStore } from '@/lib/store/challenges';
 import { useProgramStore } from '@/lib/store/programs';
-import { useTheme } from '@/theme';
+import { challengeTypeColors, useTheme } from '@/theme';
 import type { ChallengeType, UserProfile } from '@/types';
 
 const TYPE_OPTIONS: {
   type: ChallengeType;
-  label: string;
-  description: string;
   icon: keyof typeof Ionicons.glyphMap;
-  placeholder: string;
-  targetLabel?: string;
-  targetPlaceholder?: string;
+  descKey: TranslationKey;
+  placeholderKey: TranslationKey;
+  targetLabelKey?: TranslationKey;
+  targetExample?: number;
 }[] = [
   {
     type: 'økter',
-    label: 'Flest mulig økter',
-    description: 'Fullfør et antall økter innen fristen',
-    icon: 'calendar',
-    placeholder: 'F.eks. «5 økter denne uka»',
-    targetLabel: 'Antall økter',
-    targetPlaceholder: 'F.eks. 5',
+    icon: 'checkmark-done',
+    descKey: 'compete.typeDescWorkouts',
+    placeholderKey: 'compete.namePlaceholderWorkouts',
+    targetLabelKey: 'compete.targetWorkouts',
+    targetExample: 5,
   },
   {
     type: 'volum',
-    label: 'Løft mest mulig',
-    description: 'Nå et totalt løftet volum i kilo',
     icon: 'barbell',
-    placeholder: 'F.eks. «10 tonn på to uker»',
-    targetLabel: 'Volum i kg',
-    targetPlaceholder: 'F.eks. 10000',
+    descKey: 'compete.typeDescVolume',
+    placeholderKey: 'compete.namePlaceholderVolume',
+    targetLabelKey: 'compete.targetVolume',
+    targetExample: 10000,
   },
   {
     type: 'prs',
-    label: 'Sett flest rekorder',
-    description: 'Sett et antall nye personlige rekorder',
-    icon: 'trophy',
-    placeholder: 'F.eks. «Rekordjakten»',
-    targetLabel: 'Antall rekorder',
-    targetPlaceholder: 'F.eks. 3',
+    icon: 'star',
+    descKey: 'compete.typeDescPrs',
+    placeholderKey: 'compete.namePlaceholderPrs',
+    targetLabelKey: 'compete.targetPrs',
+    targetExample: 3,
   },
   {
     type: 'program',
-    label: 'Fullfør et program',
-    description: 'Kom deg gjennom alle dagene i et program',
-    icon: 'flag',
-    placeholder: 'F.eks. «Først i mål med PPL»',
+    icon: 'map',
+    descKey: 'compete.typeDescProgram',
+    placeholderKey: 'compete.namePlaceholderProgram',
   },
 ];
 
 const DURATIONS = [7, 14, 30] as const;
 
 export default function NewChallengeScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const mode = isDark ? 'dark' : 'light';
+  const t = useT();
+  const lang = useLanguage();
   const router = useRouter();
 
   const me = useAuthStore((s) => s.user);
@@ -100,7 +100,7 @@ export default function NewChallengeScreen() {
       })
       .catch((error) => {
         if (!cancelled)
-          setFriendsError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.');
+          setFriendsError(error instanceof Error ? error.message : translate('error.generic'));
       });
     return () => {
       cancelled = true;
@@ -144,8 +144,8 @@ export default function NewChallengeScreen() {
     } catch (error) {
       setCreating(false);
       infoDialog(
-        'Kunne ikke starte utfordringen',
-        error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+        t('compete.createError'),
+        error instanceof Error ? error.message : t('error.generic'),
       );
     }
   };
@@ -156,17 +156,18 @@ export default function NewChallengeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen scroll>
-        <ScreenHeader title="Ny utfordring" />
+        <ScreenHeader title={t('compete.newChallenge')} />
 
         <Animated.View entering={FadeInDown.duration(300)} style={{ gap: spacing.xl }}>
           {/* Type */}
           <View style={{ gap: spacing.md }}>
             <AppText variant="label" color="muted">
-              Type utfordring
+              {t('compete.typeSection')}
             </AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
               {TYPE_OPTIONS.map((option) => {
                 const active = option.type === type;
+                const tint = challengeTypeColors[mode][option.type];
                 return (
                   <View key={option.type} style={{ flexBasis: '46%', flexGrow: 1 }}>
                     <Card
@@ -176,8 +177,8 @@ export default function NewChallengeScreen() {
                       }}
                       style={{
                         borderWidth: 1.5,
-                        borderColor: active ? colors.accent : colors.border,
-                        backgroundColor: active ? colors.accentMuted : colors.surface,
+                        borderColor: active ? tint : colors.border,
+                        backgroundColor: active ? `${tint}29` : colors.surface,
                         minHeight: 132,
                       }}
                     >
@@ -185,11 +186,13 @@ export default function NewChallengeScreen() {
                         <Ionicons
                           name={option.icon}
                           size={22}
-                          color={active ? colors.accent : colors.textSecondary}
+                          color={active ? tint : colors.textSecondary}
                         />
-                        <AppText variant="bodyBold">{option.label}</AppText>
+                        <AppText variant="bodyBold">
+                          {challengeTypeLabel(option.type, lang)}
+                        </AppText>
                         <AppText variant="caption" color="muted">
-                          {option.description}
+                          {t(option.descKey)}
                         </AppText>
                       </View>
                     </Card>
@@ -202,12 +205,12 @@ export default function NewChallengeScreen() {
           {/* Navn */}
           <View style={{ gap: spacing.md }}>
             <AppText variant="label" color="muted">
-              Navn
+              {t('compete.nameSection')}
             </AppText>
             <Input
               value={name}
               onChangeText={setName}
-              placeholder={activeOption.placeholder}
+              placeholder={t(activeOption.placeholderKey)}
               returnKeyType="done"
               maxLength={40}
             />
@@ -217,12 +220,16 @@ export default function NewChallengeScreen() {
           {type !== 'program' ? (
             <View style={{ gap: spacing.md }}>
               <AppText variant="label" color="muted">
-                {activeOption.targetLabel}
+                {activeOption.targetLabelKey ? t(activeOption.targetLabelKey) : ''}
               </AppText>
               <Input
                 value={targetText}
-                onChangeText={(t) => setTargetText(t.replace(/[^0-9]/g, ''))}
-                placeholder={activeOption.targetPlaceholder}
+                onChangeText={(text) => setTargetText(text.replace(/[^0-9]/g, ''))}
+                placeholder={
+                  activeOption.targetExample !== undefined
+                    ? t('compete.egNumber', { n: activeOption.targetExample })
+                    : undefined
+                }
                 keyboardType="number-pad"
                 returnKeyType="done"
                 maxLength={7}
@@ -231,18 +238,18 @@ export default function NewChallengeScreen() {
           ) : (
             <View style={{ gap: spacing.md }}>
               <AppText variant="label" color="muted">
-                Velg program
+                {t('compete.pickProgram')}
               </AppText>
               {programs.length === 0 ? (
                 <AppText variant="caption" color="muted">
-                  Du har ingen programmer ennå. Lag et under Trening først.
+                  {t('compete.noPrograms')}
                 </AppText>
               ) : (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                   {programs.map((p) => (
                     <Chip
                       key={p.id}
-                      label={`${p.name} (${p.days.length} dager)`}
+                      label={t('compete.programDays', { name: p.name, count: p.days.length })}
                       selected={programId === p.id}
                       onPress={() => setProgramId(p.id)}
                     />
@@ -251,7 +258,7 @@ export default function NewChallengeScreen() {
               )}
               {selectedProgram ? (
                 <AppText variant="caption" color="muted">
-                  {`Mål: fullfør alle ${selectedProgram.days.length} dagene i programmet.`}
+                  {t('compete.programGoal', { count: selectedProgram.days.length })}
                 </AppText>
               ) : null}
             </View>
@@ -260,13 +267,13 @@ export default function NewChallengeScreen() {
           {/* Varighet */}
           <View style={{ gap: spacing.md }}>
             <AppText variant="label" color="muted">
-              Varighet
+              {t('compete.duration')}
             </AppText>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               {DURATIONS.map((d) => (
                 <Chip
                   key={d}
-                  label={`${d} dager`}
+                  label={t('compete.durationDays', { count: d })}
                   selected={durationDays === d}
                   onPress={() => setDurationDays(d)}
                 />
@@ -277,7 +284,7 @@ export default function NewChallengeScreen() {
           {/* Deltakere */}
           <View style={{ gap: spacing.md }}>
             <AppText variant="label" color="muted">
-              Utfordre venner (valgfritt)
+              {t('compete.inviteFriends')}
             </AppText>
             {friendsError ? (
               <View style={{ gap: spacing.sm }}>
@@ -285,7 +292,7 @@ export default function NewChallengeScreen() {
                   {friendsError}
                 </AppText>
                 <Button
-                  title="Prøv igjen"
+                  title={t('common.retry')}
                   size="sm"
                   variant="secondary"
                   onPress={() => {
@@ -302,10 +309,10 @@ export default function NewChallengeScreen() {
             ) : friends.length === 0 ? (
               <View style={{ gap: spacing.sm }}>
                 <AppText variant="caption" color="muted">
-                  Du har ingen venner ennå — du kan fint kjøre solo.
+                  {t('compete.noFriendsYet')}
                 </AppText>
                 <Button
-                  title="Legg til venner"
+                  title={t('compete.addFriends')}
                   icon="person-add-outline"
                   size="sm"
                   variant="secondary"
@@ -375,17 +382,17 @@ export default function NewChallengeScreen() {
                 </View>
                 <AppText variant="caption" color="muted">
                   {selectedIds.size === 0
-                    ? 'Ingen valgt — du kjører solo.'
+                    ? t('compete.soloSelected')
                     : selectedIds.size === 1
-                      ? '1 venn blir utfordret.'
-                      : `${selectedIds.size} venner blir utfordret.`}
+                      ? t('compete.oneFriendChallenged')
+                      : t('compete.friendsChallenged', { count: selectedIds.size })}
                 </AppText>
               </View>
             )}
           </View>
 
           <Button
-            title="Start"
+            title={t('common.start')}
             icon="flash"
             size="lg"
             fullWidth

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { t } from '@/i18n';
 import {
   deleteProgram as apiDeleteProgram,
   deleteTemplate as apiDeleteTemplate,
@@ -14,12 +15,15 @@ import { uid } from '@/lib/ids';
 import { useAuthStore } from './auth';
 import type { Program, ProgramDay, WorkoutTemplate } from '@/types';
 
-/** Startprogrammer så appen ikke er tom ved første åpning (seedes til serveren) */
-const STARTER_PROGRAMS: Program[] = [
+/**
+ * Startprogrammer så appen ikke er tom ved første åpning (seedes til serveren).
+ * Bygges ved seedtidspunkt slik at navn/beskrivelser følger brukerens aktive språk.
+ */
+const starterPrograms = (): Program[] => [
   {
     id: 'prog-ppl',
-    name: 'Push Pull Legs',
-    description: 'Klassisk 3-splitt for muskelvekst. Kjør 3–6 økter i uka.',
+    name: t('training.starterPplName'),
+    description: t('training.starterPplDesc'),
     isFavorite: true,
     createdAt: '2026-01-01T00:00:00Z',
     days: [
@@ -59,14 +63,14 @@ const STARTER_PROGRAMS: Program[] = [
   },
   {
     id: 'prog-fullkropp',
-    name: 'Fullkropp 3 dager',
-    description: 'Effektivt helkroppsprogram for deg som trener 2–3 ganger i uka.',
+    name: t('training.starterFullBodyName'),
+    description: t('training.starterFullBodyDesc'),
     isFavorite: false,
     createdAt: '2026-01-01T00:00:00Z',
     days: [
       {
         id: 'fk-a',
-        name: 'Dag A',
+        name: t('training.starterDayA'),
         exercises: [
           { exerciseId: 'kneboy', sets: 3, repsMin: 5, repsMax: 8 },
           { exerciseId: 'benkpress', sets: 3, repsMin: 5, repsMax: 8 },
@@ -76,7 +80,7 @@ const STARTER_PROGRAMS: Program[] = [
       },
       {
         id: 'fk-b',
-        name: 'Dag B',
+        name: t('training.starterDayB'),
         exercises: [
           { exerciseId: 'markloft', sets: 3, repsMin: 3, repsMax: 5 },
           { exerciseId: 'skulderpress-stang', sets: 3, repsMin: 8, repsMax: 10 },
@@ -86,7 +90,7 @@ const STARTER_PROGRAMS: Program[] = [
       },
       {
         id: 'fk-c',
-        name: 'Dag C',
+        name: t('training.starterDayC'),
         exercises: [
           { exerciseId: 'frontboy', sets: 3, repsMin: 6, repsMax: 8 },
           { exerciseId: 'dips', sets: 3, repsMin: 8, repsMax: 12 },
@@ -98,10 +102,10 @@ const STARTER_PROGRAMS: Program[] = [
   },
 ];
 
-const STARTER_TEMPLATES: WorkoutTemplate[] = [
+const starterTemplates = (): WorkoutTemplate[] => [
   {
     id: 'tmpl-overkropp',
-    name: 'Rask overkropp',
+    name: t('training.starterUpperName'),
     isFavorite: true,
     createdAt: '2026-01-01T00:00:00Z',
     exercises: [
@@ -114,7 +118,7 @@ const STARTER_TEMPLATES: WorkoutTemplate[] = [
   },
   {
     id: 'tmpl-bein',
-    name: 'Beindag express',
+    name: t('training.starterLegsName'),
     isFavorite: false,
     createdAt: '2026-01-01T00:00:00Z',
     exercises: [
@@ -170,13 +174,13 @@ export const useProgramStore = create<ProgramState>()((set, get) => ({
       const alreadySeeded = (await AsyncStorage.getItem(flagKey)) != null;
       if (programs.length === 0 && templates.length === 0 && !alreadySeeded) {
         programs = await Promise.all(
-          STARTER_PROGRAMS.map(({ id: _id, createdAt: _createdAt, ...p }) =>
+          starterPrograms().map(({ id: _id, createdAt: _createdAt, ...p }) =>
             insertProgram(userId, p),
           ),
         );
         templates = await Promise.all(
-          STARTER_TEMPLATES.map(({ id: _id, createdAt: _createdAt, ...t }) =>
-            insertTemplate(userId, t),
+          starterTemplates().map(({ id: _id, createdAt: _createdAt, ...tmpl }) =>
+            insertTemplate(userId, tmpl),
           ),
         );
         await AsyncStorage.setItem(flagKey, '1');

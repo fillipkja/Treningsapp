@@ -1,20 +1,20 @@
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { AppText, Screen } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function Index() {
   const status = useAuthStore((s) => s.status);
+  const t = useT();
 
   if (!isSupabaseConfigured) {
     return (
       <Screen>
         <View style={{ flex: 1, justifyContent: 'center', gap: 8 }}>
-          <AppText variant="heading">Mangler konfigurasjon</AppText>
-          <AppText color="secondary">
-            Sett EXPO_PUBLIC_SUPABASE_URL og EXPO_PUBLIC_SUPABASE_ANON_KEY i .env og bygg på nytt.
-          </AppText>
+          <AppText variant="heading">{t('common.missingConfigTitle')}</AppText>
+          <AppText color="secondary">{t('common.missingConfigBody')}</AppText>
         </View>
       </Screen>
     );

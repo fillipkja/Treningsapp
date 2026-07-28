@@ -3,34 +3,26 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Card, ProgressBar, Screen, ScreenHeader } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { tierLabel } from '@/i18n/labels';
 import { formatRelativeDate } from '@/lib/format';
-import { BADGE_DEFS } from '@/lib/logic/badges';
+import { BADGE_DEFS, badgeDescription, badgeName } from '@/lib/logic/badges';
 import { useWorkoutStore } from '@/lib/store/workouts';
-import { useTheme, type ThemeColors } from '@/theme';
-import type { BadgeTier } from '@/types';
+import { tierColors, useTheme } from '@/theme';
 
-const TIER_LABEL: Record<BadgeTier, string> = {
-  bronse: 'Bronse',
-  sølv: 'Sølv',
-  gull: 'Gull',
-};
-
-function tierColor(tier: BadgeTier, colors: ThemeColors): string {
-  if (tier === 'gull') return colors.gold;
-  if (tier === 'sølv') return colors.textSecondary;
-  // Bronse finnes ikke i paletten — eneste tillatte unntak fra temafargene.
-  return '#b08d57';
-}
-
-/** «Opptjent 12. mars» — med liten forbokstav for «i dag»/«i går» */
-function earnedLabel(iso: string): string {
+/** «I dag»/«Today» skal ha liten forbokstav midt i setningen; datoer beholdes som de er */
+function relativeDateInline(iso: string): string {
   const rel = formatRelativeDate(iso);
-  const text = rel === 'I dag' || rel === 'I går' ? rel.toLowerCase() : rel;
-  return `Opptjent ${text}`;
+  return rel === 'I dag' || rel === 'I går' || rel === 'Today' || rel === 'Yesterday'
+    ? rel.toLowerCase()
+    : rel;
 }
 
 export default function BadgesScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const mode = isDark ? 'dark' : 'light';
+  const t = useT();
+  const lang = useLanguage();
   const earnedBadges = useWorkoutStore((s) => s.earnedBadges);
 
   const earnedAtById = useMemo(
@@ -53,16 +45,20 @@ export default function BadgesScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Merker" />
+      <ScreenHeader title={t('common.badges')} />
 
       <Animated.View
         entering={FadeInDown.duration(300)}
         style={{ gap: spacing.sm, marginBottom: spacing.lg }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <AppText variant="subheading">{`${earnedCount} av ${BADGE_DEFS.length} opptjent`}</AppText>
+          <AppText variant="subheading">
+            {t('compete.earnedOf', { earned: earnedCount, total: BADGE_DEFS.length })}
+          </AppText>
           <AppText variant="caption" color="muted">
-            {`${Math.round((earnedCount / BADGE_DEFS.length) * 100)} %`}
+            {t('compete.percentValue', {
+              value: Math.round((earnedCount / BADGE_DEFS.length) * 100),
+            })}
           </AppText>
         </View>
         <ProgressBar progress={earnedCount / BADGE_DEFS.length} color={colors.gold} />
@@ -72,7 +68,7 @@ export default function BadgesScreen() {
         {sortedDefs.map((def, index) => {
           const earnedAt = earnedAtById.get(def.id);
           const locked = !earnedAt;
-          const tint = tierColor(def.tier, colors);
+          const tint = tierColors[mode][def.tier];
           return (
             <Animated.View
               key={def.id}
@@ -86,15 +82,21 @@ export default function BadgesScreen() {
                       width: 64,
                       height: 64,
                       borderRadius: radius.full,
-                      backgroundColor: colors.surfaceElevated,
+                      backgroundColor: locked ? colors.surfaceElevated : `${tint}29`,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <AppText style={{ fontSize: 30 }}>{def.icon}</AppText>
+                    <Ionicons
+                      name={
+                        locked ? 'lock-closed' : (def.icon as keyof typeof Ionicons.glyphMap)
+                      }
+                      size={30}
+                      color={locked ? colors.textMuted : tint}
+                    />
                   </View>
                   <AppText variant="bodyBold" numberOfLines={1} style={{ textAlign: 'center' }}>
-                    {def.name}
+                    {badgeName(def.id, lang)}
                   </AppText>
                   <AppText
                     variant="caption"
@@ -102,7 +104,7 @@ export default function BadgesScreen() {
                     numberOfLines={2}
                     style={{ textAlign: 'center', minHeight: 32 }}
                   >
-                    {def.description}
+                    {badgeDescription(def.id, lang)}
                   </AppText>
                   <View
                     style={{
@@ -114,21 +116,18 @@ export default function BadgesScreen() {
                     }}
                   >
                     <AppText variant="caption" style={{ color: tint, fontWeight: '600' }}>
-                      {TIER_LABEL[def.tier]}
+                      {tierLabel(def.tier, lang)}
                     </AppText>
                   </View>
                 </View>
                 <View style={{ alignItems: 'center', marginTop: spacing.sm }}>
                   {locked ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                      <Ionicons name="lock-closed" size={12} color={colors.textMuted} />
-                      <AppText variant="caption" color="muted">
-                        Låst
-                      </AppText>
-                    </View>
+                    <AppText variant="caption" color="muted">
+                      {t('compete.locked')}
+                    </AppText>
                   ) : (
                     <AppText variant="caption" color="success" style={{ fontWeight: '600' }}>
-                      {earnedLabel(earnedAt)}
+                      {t('compete.earnedDate', { date: relativeDateInline(earnedAt) })}
                     </AppText>
                   )}
                 </View>

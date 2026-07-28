@@ -1,7 +1,9 @@
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import {
   AppText,
   Avatar,
@@ -13,22 +15,28 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { goalLabel } from '@/i18n/labels';
 import { confirmDialog } from '@/lib/dialogs';
 import { formatNumber } from '@/lib/format';
 import { useAuthStore } from '@/lib/store/auth';
 import { useWorkoutStore } from '@/lib/store/workouts';
 import { useTheme } from '@/theme';
-import type { TrainingGoal } from '@/types';
 
-const GOAL_LABELS: Record<TrainingGoal, string> = {
-  styrke: 'Styrke 🏋️',
-  muskelvekst: 'Muskelvekst 💪',
-  utholdenhet: 'Utholdenhet 🏃',
-  helse: 'Helse 🌱',
-};
-
-function Stat({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
-  const { spacing } = useTheme();
+function Stat({
+  value,
+  label,
+  valueColor,
+  icon,
+  onPress,
+}: {
+  value: number;
+  label: string;
+  valueColor?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  onPress?: () => void;
+}) {
+  const { colors, spacing } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -41,7 +49,12 @@ function Stat({ value, label, onPress }: { value: number; label: string; onPress
         opacity: pressed ? 0.6 : 1,
       })}
     >
-      <AppText variant="title">{formatNumber(value)}</AppText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        {icon ? <Ionicons name={icon} size={16} color={valueColor ?? colors.accent} /> : null}
+        <AppText variant="title" style={valueColor ? { color: valueColor } : undefined}>
+          {formatNumber(value)}
+        </AppText>
+      </View>
       <AppText variant="caption" color="muted">
         {label}
       </AppText>
@@ -51,6 +64,8 @@ function Stat({ value, label, onPress }: { value: number; label: string; onPress
 
 export default function ProfilScreen() {
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
   const { colors, spacing, radius } = useTheme();
 
   const user = useAuthStore((s) => s.user);
@@ -64,9 +79,9 @@ export default function ProfilScreen() {
   const confirmSignOut = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     confirmDialog({
-      title: 'Logg ut',
-      message: 'Er du sikker på at du vil logge ut?',
-      confirmLabel: 'Logg ut',
+      title: t('profile.signOut'),
+      message: t('profile.signOutConfirm'),
+      confirmLabel: t('profile.signOut'),
       destructive: true,
       onConfirm: async () => {
         await signOut();
@@ -77,67 +92,94 @@ export default function ProfilScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Profil" hideBack />
+      <ScreenHeader title={t('profile.title')} hideBack />
 
       {/* Toppkort med identitet */}
       <Animated.View entering={FadeInDown.duration(300)}>
-        <Card style={{ alignItems: 'center', gap: spacing.md }}>
-          <Avatar name={user.displayName || user.username} color={user.avatarColor} uri={user.avatarUri} size={96} />
-          <View style={{ alignItems: 'center', gap: spacing.xs }}>
-            <AppText variant="title" numberOfLines={1}>
-              {user.displayName || user.username}
-            </AppText>
-            <View
-              style={{
-                backgroundColor: colors.accentMuted,
-                borderRadius: radius.full,
-                paddingHorizontal: spacing.md,
-                paddingVertical: 4,
-              }}
-            >
-              <AppText variant="bodyBold" style={{ color: colors.accent }}>
-                @{user.username}
-              </AppText>
-            </View>
-            <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-              Del brukernavnet ditt så venner kan finne deg
-            </AppText>
-          </View>
-          {user.bio ? (
-            <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              {user.bio}
-            </AppText>
-          ) : null}
+        <Card padded={false} style={{ overflow: 'hidden' }}>
+          {/* Dekorativ banner — avataren overlapper halvveis */}
+          <LinearGradient
+            colors={[...colors.gradientAccent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ height: 80, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }}
+          />
           <View
             style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: spacing.sm,
+              alignItems: 'center',
+              gap: spacing.md,
+              padding: spacing.lg,
+              paddingTop: 0,
+              marginTop: -48,
             }}
           >
-            {user.heightCm ? <Chip label={`${formatNumber(user.heightCm)} cm`} icon="resize-outline" /> : null}
-            {user.weightKg ? <Chip label={`${formatNumber(user.weightKg, Number.isInteger(user.weightKg) ? 0 : 1)} kg`} icon="scale-outline" /> : null}
-            {user.goal ? <Chip label={GOAL_LABELS[user.goal]} selected /> : null}
+            <Avatar name={user.displayName || user.username} color={user.avatarColor} uri={user.avatarUri} size={96} />
+            <View style={{ alignItems: 'center', gap: spacing.xs }}>
+              <AppText variant="title" numberOfLines={1}>
+                {user.displayName || user.username}
+              </AppText>
+              <View
+                style={{
+                  backgroundColor: colors.accentMuted,
+                  borderRadius: radius.full,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 4,
+                }}
+              >
+                <AppText variant="bodyBold" style={{ color: colors.accent }}>
+                  @{user.username}
+                </AppText>
+              </View>
+              <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
+                {t('profile.shareUsernameHint')}
+              </AppText>
+            </View>
+            {user.bio ? (
+              <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+                {user.bio}
+              </AppText>
+            ) : null}
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: spacing.sm,
+              }}
+            >
+              {user.heightCm ? <Chip label={`${formatNumber(user.heightCm)} cm`} icon="resize-outline" /> : null}
+              {user.weightKg ? <Chip label={`${formatNumber(user.weightKg, Number.isInteger(user.weightKg) ? 0 : 1)} kg`} icon="scale-outline" /> : null}
+              {user.goal ? <Chip label={goalLabel(user.goal, lang)} selected /> : null}
+            </View>
+            <Button
+              title={t('profile.editProfile')}
+              variant="secondary"
+              icon="create-outline"
+              fullWidth
+              onPress={() => router.push('/settings/edit-profile')}
+            />
           </View>
-          <Button
-            title="Rediger profil"
-            variant="secondary"
-            icon="create-outline"
-            fullWidth
-            onPress={() => router.push('/settings/edit-profile')}
-          />
         </Card>
       </Animated.View>
 
       {/* Statistikkrad */}
       <Animated.View entering={FadeInDown.delay(60).duration(300)}>
         <Card style={{ marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center' }}>
-          <Stat value={workouts.length} label="Økter totalt" />
+          <Stat value={workouts.length} label={t('profile.totalWorkouts')} />
           <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border }} />
-          <Stat value={prs.length} label="Rekorder" onPress={() => router.push('/(tabs)/statistikk')} />
+          <Stat
+            value={prs.length}
+            label={t('common.records')}
+            valueColor={colors.gold}
+            onPress={() => router.push('/(tabs)/statistikk')}
+          />
           <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border }} />
-          <Stat value={earnedBadges.length} label="Merker" onPress={() => router.push('/badges')} />
+          <Stat
+            value={earnedBadges.length}
+            label={t('common.badges')}
+            icon="ribbon"
+            onPress={() => router.push('/badges')}
+          />
         </Card>
       </Animated.View>
 
@@ -146,30 +188,30 @@ export default function ProfilScreen() {
         <Card style={{ marginTop: spacing.lg }} padded={false}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <ListItem
-              title="Venner"
-              subtitle="Finn venner og se treningen deres"
+              title={t('common.friends')}
+              subtitle={t('profile.friendsSubtitle')}
               icon="people-outline"
               chevron
               onPress={() => router.push('/friends')}
             />
             <Divider />
             <ListItem
-              title="Merker"
-              subtitle={`${formatNumber(earnedBadges.length)} opptjent`}
+              title={t('common.badges')}
+              subtitle={t('profile.badgesEarned', { count: formatNumber(earnedBadges.length) })}
               icon="ribbon-outline"
               chevron
               onPress={() => router.push('/badges')}
             />
             <Divider />
             <ListItem
-              title="Innstillinger"
-              subtitle="Deling, tema og konto"
+              title={t('profile.settingsTitle')}
+              subtitle={t('profile.settingsSubtitle')}
               icon="settings-outline"
               chevron
               onPress={() => router.push('/settings')}
             />
             <Divider />
-            <ListItem title="Logg ut" icon="log-out-outline" destructive onPress={confirmSignOut} />
+            <ListItem title={t('profile.signOut')} icon="log-out-outline" destructive onPress={confirmSignOut} />
           </View>
         </Card>
       </Animated.View>

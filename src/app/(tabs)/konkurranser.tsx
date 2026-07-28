@@ -15,32 +15,27 @@ import {
   SegmentedControl,
   Sheet,
 } from '@/components/ui';
+import { t as translate, useLanguage, useT } from '@/i18n';
+import { challengeTypeLabel } from '@/i18n/labels';
 import { fetchFriendLeaderboard, type FriendLeaderboardResult } from '@/lib/api/leaderboard';
 import { fetchProfilesByIds } from '@/lib/api/profiles';
 import { formatNumber, formatVolume } from '@/lib/format';
-import { BADGE_DEFS } from '@/lib/logic/badges';
+import { BADGE_DEFS, badgeName } from '@/lib/logic/badges';
 import { periodInterval } from '@/lib/logic/leaderboard';
 import { POINTS } from '@/lib/logic/points';
 import { useAuthStore } from '@/lib/store/auth';
 import { useChallengeStore } from '@/lib/store/challenges';
 import { useWorkoutStore } from '@/lib/store/workouts';
-import { useTheme, type ThemeColors } from '@/theme';
+import { challengeTypeColors, tierColors, useTheme } from '@/theme';
 import type { ChallengeType, Period, UserProfile } from '@/types';
 
-const CHALLENGE_META: Record<ChallengeType, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  økter: { label: 'Antall økter', icon: 'calendar' },
-  volum: { label: 'Løftet volum', icon: 'barbell' },
-  prs: { label: 'Personlige rekorder', icon: 'trophy' },
-  program: { label: 'Fullfør program', icon: 'flag' },
+/** Ikon per utfordringstype — fast tilordning, farge følger typen */
+const TYPE_ICON: Record<ChallengeType, keyof typeof Ionicons.glyphMap> = {
+  økter: 'checkmark-done',
+  volum: 'barbell',
+  prs: 'star',
+  program: 'map',
 };
-
-/** Gull/sølv/bronse til pallen. Bronse finnes ikke i paletten — samme unntak som i badges. */
-function medalColor(rank: number, colors: ThemeColors): string | undefined {
-  if (rank === 1) return colors.gold;
-  if (rank === 2) return colors.textSecondary;
-  if (rank === 3) return '#b08d57';
-  return undefined;
-}
 
 interface BoardEntry {
   userId: string;
@@ -75,19 +70,11 @@ function toBoardEntries(rows: FriendLeaderboardResult[]): BoardEntry[] {
   return entries;
 }
 
-function daysLeftLabel(endIso: string): string {
-  const days = differenceInCalendarDays(parseISO(endIso), new Date());
-  if (days <= 0) return 'Siste dag';
-  if (days === 1) return '1 dag igjen';
-  return `${days} dager igjen`;
-}
-
-function participantsLabel(count: number): string {
-  return count === 1 ? '1 deltaker' : `${count} deltakere`;
-}
-
 export default function KonkurranserScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const mode = isDark ? 'dark' : 'light';
+  const t = useT();
+  const lang = useLanguage();
   const router = useRouter();
 
   const me = useAuthStore((s) => s.user);
@@ -107,6 +94,24 @@ export default function KonkurranserScreen() {
   const [boardError, setBoardError] = useState<string | null>(null);
   const [challengesError, setChallengesError] = useState<string | null>(null);
 
+  /** Gull/sølv/bronse til pallen */
+  const medalColor = (rank: number): string | undefined => {
+    if (rank === 1) return tierColors[mode].gull;
+    if (rank === 2) return tierColors[mode].sølv;
+    if (rank === 3) return tierColors[mode].bronse;
+    return undefined;
+  };
+
+  const daysLeftLabel = (endIso: string): string => {
+    const days = differenceInCalendarDays(parseISO(endIso), new Date());
+    if (days <= 0) return t('compete.lastDay');
+    if (days === 1) return t('compete.oneDayLeft');
+    return t('common.daysLeft', { count: days });
+  };
+
+  const participantsLabel = (count: number): string =>
+    count === 1 ? t('compete.participantsOne') : t('compete.participantsMany', { count });
+
   /** Perioden det pågår en henting for — hindrer at et tregt svar overskriver et nyere */
   const requestedPeriod = useRef<Period>(period);
 
@@ -121,7 +126,7 @@ export default function KonkurranserScreen() {
       setBoard({ period, entries: toBoardEntries(rows), profiles });
     } catch (error) {
       if (requestedPeriod.current !== period) return;
-      setBoardError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.');
+      setBoardError(error instanceof Error ? error.message : translate('error.generic'));
     }
   }, [period]);
 
@@ -140,7 +145,7 @@ export default function KonkurranserScreen() {
       if (challengesLoaded || challengesLoading || challengesError) return;
       loadChallenges().catch((error: unknown) =>
         setChallengesError(
-          error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+          error instanceof Error && error.message ? error.message : translate('error.generic'),
         ),
       );
     }, [challengesLoaded, challengesLoading, challengesError, loadChallenges]),
@@ -169,7 +174,9 @@ export default function KonkurranserScreen() {
   const profiles = board?.profiles ?? new Map<string, UserProfile>();
 
   const nameOf = (userId: string): string =>
-    userId === me?.id ? 'Deg' : (profiles.get(userId)?.displayName ?? 'Ukjent');
+    userId === me?.id
+      ? t('common.you')
+      : (profiles.get(userId)?.displayName ?? t('compete.unknownUser'));
 
   const renderRow = (entry: BoardEntry) => {
     const profile = profiles.get(entry.userId);
@@ -204,10 +211,12 @@ export default function KonkurranserScreen() {
             {nameOf(entry.userId)}
           </AppText>
           <AppText variant="caption" color="muted">
-            {`${formatNumber(entry.workouts)} økter · ${formatVolume(entry.volumeKg)}`}
+            {`${t('compete.workoutsCount', { count: formatNumber(entry.workouts) })} · ${formatVolume(entry.volumeKg)}`}
           </AppText>
         </View>
-        <AppText variant="bodyBold" color="accent">{`${formatNumber(entry.points)} p`}</AppText>
+        <AppText variant="bodyBold" color="accent">
+          {t('compete.pointsShort', { points: formatNumber(entry.points) })}
+        </AppText>
       </Pressable>
     );
   };
@@ -215,7 +224,7 @@ export default function KonkurranserScreen() {
   const renderPodiumColumn = (entry: BoardEntry) => {
     const profile = profiles.get(entry.userId);
     const isMe = entry.userId === me?.id;
-    const medal = medalColor(entry.rank, colors) ?? colors.border;
+    const medal = medalColor(entry.rank) ?? colors.border;
     const size = entry.rank === 1 ? 72 : 54;
     return (
       <Pressable
@@ -253,7 +262,9 @@ export default function KonkurranserScreen() {
         <AppText variant="caption" numberOfLines={1} style={{ fontWeight: '600', maxWidth: '100%' }}>
           {nameOf(entry.userId)}
         </AppText>
-        <AppText variant="caption" color="muted">{`${formatNumber(entry.points)} p`}</AppText>
+        <AppText variant="caption" color="muted">
+          {t('compete.pointsShort', { points: formatNumber(entry.points) })}
+        </AppText>
       </Pressable>
     );
   };
@@ -266,7 +277,12 @@ export default function KonkurranserScreen() {
             <AppText variant="caption" color="danger" style={{ textAlign: 'center' }}>
               {boardError}
             </AppText>
-            <Button title="Prøv igjen" size="sm" variant="secondary" onPress={() => void loadBoard()} />
+            <Button
+              title={t('common.retry')}
+              size="sm"
+              variant="secondary"
+              onPress={() => void loadBoard()}
+            />
           </View>
         </Card>
       );
@@ -277,7 +293,7 @@ export default function KonkurranserScreen() {
           <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg }}>
             <ActivityIndicator color={colors.accent} />
             <AppText variant="caption" color="muted">
-              Henter rangering …
+              {t('compete.loadingBoard')}
             </AppText>
           </View>
         </Card>
@@ -305,9 +321,9 @@ export default function KonkurranserScreen() {
                 <Ionicons name="person-add" size={22} color={colors.accent} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
-                <AppText variant="bodyBold">Legg til venner for å konkurrere</AppText>
+                <AppText variant="bodyBold">{t('compete.addFriendsTitle')}</AppText>
                 <AppText variant="caption" color="muted">
-                  Rangeringen blir morsommere med flere på lista.
+                  {t('compete.addFriendsBody')}
                 </AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -341,13 +357,13 @@ export default function KonkurranserScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Konkurrer" hideBack />
+      <ScreenHeader title={t('compete.title')} hideBack />
 
       {/* Rangering blant venner */}
       <Animated.View entering={FadeInDown.duration(300)} style={{ gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <AppText variant="label" color="muted">
-            Rangering blant venner
+            {t('compete.leaderboard')}
           </AppText>
           <Pressable hitSlop={8} onPress={() => setShowPointsInfo(true)}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
@@ -356,8 +372,8 @@ export default function KonkurranserScreen() {
 
         <SegmentedControl
           options={[
-            { label: 'Uke', value: 'uke' },
-            { label: 'Måned', value: 'måned' },
+            { label: t('compete.week'), value: 'uke' },
+            { label: t('compete.month'), value: 'måned' },
           ]}
           value={period}
           onChange={(v) => setPeriod(v as Period)}
@@ -373,7 +389,7 @@ export default function KonkurranserScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <AppText variant="label" color="muted">
-            Utfordringer
+            {t('compete.challenges')}
           </AppText>
           <Pressable
             hitSlop={8}
@@ -387,7 +403,7 @@ export default function KonkurranserScreen() {
           >
             <Ionicons name="add" size={16} color={colors.accent} />
             <AppText variant="caption" color="accent" style={{ fontWeight: '600' }}>
-              Ny utfordring
+              {t('compete.newChallenge')}
             </AppText>
           </Pressable>
         </View>
@@ -399,7 +415,7 @@ export default function KonkurranserScreen() {
                 {challengesError}
               </AppText>
               <Button
-                title="Prøv igjen"
+                title={t('common.retry')}
                 size="sm"
                 variant="secondary"
                 onPress={() => {
@@ -408,7 +424,7 @@ export default function KonkurranserScreen() {
                     setChallengesError(
                       error instanceof Error && error.message
                         ? error.message
-                        : 'Noe gikk galt. Prøv igjen.',
+                        : translate('error.generic'),
                     ),
                   );
                 }}
@@ -425,16 +441,16 @@ export default function KonkurranserScreen() {
           <Card padded={false}>
             <EmptyState
               icon="flash-outline"
-              title="Ingen utfordringer ennå"
-              message="Utfordre deg selv eller vennene dine — f.eks. 5 økter på én uke."
-              actionTitle="Ny utfordring"
+              title={t('compete.noChallengesTitle')}
+              message={t('compete.noChallengesBody')}
+              actionTitle={t('compete.newChallenge')}
               onAction={() => router.push('/challenges/new')}
             />
           </Card>
         ) : (
           challengeCards.map(({ challenge, endMs }) => {
-            const meta = CHALLENGE_META[challenge.type];
             const ended = endMs < Date.now();
+            const tint = challengeTypeColors[mode][challenge.type];
             return (
               <Card key={challenge.id} onPress={() => router.push(`/challenges/${challenge.id}`)}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -443,15 +459,15 @@ export default function KonkurranserScreen() {
                       width: 44,
                       height: 44,
                       borderRadius: radius.md,
-                      backgroundColor: ended ? colors.surfaceElevated : colors.accentMuted,
+                      backgroundColor: ended ? colors.surfaceElevated : `${tint}29`,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
                     <Ionicons
-                      name={meta.icon}
+                      name={TYPE_ICON[challenge.type]}
                       size={22}
-                      color={ended ? colors.textMuted : colors.accent}
+                      color={ended ? colors.textMuted : tint}
                     />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
@@ -459,7 +475,7 @@ export default function KonkurranserScreen() {
                       {challenge.name}
                     </AppText>
                     <AppText variant="caption" color="muted">
-                      {`${meta.label} · ${ended ? 'Avsluttet' : daysLeftLabel(challenge.endDate)} · ${participantsLabel(challenge.participants.length)}`}
+                      {`${challengeTypeLabel(challenge.type, lang)} · ${ended ? t('compete.ended') : daysLeftLabel(challenge.endDate)} · ${participantsLabel(challenge.participants.length)}`}
                     </AppText>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -477,7 +493,7 @@ export default function KonkurranserScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <AppText variant="label" color="muted">
-            Merker
+            {t('common.badges')}
           </AppText>
           <Pressable
             hitSlop={8}
@@ -490,7 +506,10 @@ export default function KonkurranserScreen() {
             })}
           >
             <AppText variant="caption" color="accent" style={{ fontWeight: '600' }}>
-              {`Se alle (${earnedBadges.length}/${BADGE_DEFS.length})`}
+              {t('compete.badgesSeeAll', {
+                earned: earnedBadges.length,
+                total: BADGE_DEFS.length,
+              })}
             </AppText>
             <Ionicons name="chevron-forward" size={14} color={colors.accent} />
           </Pressable>
@@ -499,29 +518,36 @@ export default function KonkurranserScreen() {
         <Card>
           {recentBadges.length === 0 ? (
             <AppText variant="caption" color="muted">
-              Ingen merker ennå — fullfør økter for å låse opp de første.
+              {t('compete.noBadgesYet')}
             </AppText>
           ) : (
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              {recentBadges.map((def) => (
-                <View key={def.id} style={{ flex: 1, alignItems: 'center', gap: spacing.sm }}>
-                  <View
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: radius.full,
-                      backgroundColor: colors.surfaceElevated,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <AppText style={{ fontSize: 26 }}>{def.icon}</AppText>
+              {recentBadges.map((def) => {
+                const tint = tierColors[mode][def.tier];
+                return (
+                  <View key={def.id} style={{ flex: 1, alignItems: 'center', gap: spacing.sm }}>
+                    <View
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: radius.full,
+                        backgroundColor: `${tint}29`,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons
+                        name={def.icon as keyof typeof Ionicons.glyphMap}
+                        size={26}
+                        color={tint}
+                      />
+                    </View>
+                    <AppText variant="caption" numberOfLines={2} style={{ textAlign: 'center' }}>
+                      {badgeName(def.id, lang)}
+                    </AppText>
                   </View>
-                  <AppText variant="caption" numberOfLines={2} style={{ textAlign: 'center' }}>
-                    {def.name}
-                  </AppText>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
         </Card>
@@ -531,24 +557,27 @@ export default function KonkurranserScreen() {
       <Sheet
         visible={showPointsInfo}
         onClose={() => setShowPointsInfo(false)}
-        title="Slik funker poengene"
+        title={t('compete.pointsInfoTitle')}
       >
         <View style={{ gap: spacing.lg, paddingBottom: spacing.md }}>
           {[
             {
               icon: 'barbell' as const,
-              title: `${POINTS.perWorkout} poeng per økt`,
-              body: 'Hver fullførte treningsøkt teller.',
+              title: t('compete.pointsPerWorkout', { points: POINTS.perWorkout }),
+              body: t('compete.pointsPerWorkoutBody'),
             },
             {
               icon: 'trending-up' as const,
-              title: `${POINTS.perVolumeChunk} poeng per ${POINTS.volumeChunkKg} kg`,
-              body: 'Totalt løftet volum (vekt × reps) gir poeng.',
+              title: t('compete.pointsPerVolume', {
+                points: POINTS.perVolumeChunk,
+                chunk: POINTS.volumeChunkKg,
+              }),
+              body: t('compete.pointsPerVolumeBody'),
             },
             {
               icon: 'trophy' as const,
-              title: `${POINTS.perPR} poeng per rekord`,
-              body: 'Nye personlige rekorder belønnes ekstra.',
+              title: t('compete.pointsPerPr', { points: POINTS.perPR }),
+              body: t('compete.pointsPerPrBody'),
             },
           ].map((row) => (
             <View key={row.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -573,7 +602,7 @@ export default function KonkurranserScreen() {
             </View>
           ))}
           <AppText variant="caption" color="muted">
-            Rangeringen sammenligner deg og vennene dine i valgt periode — uke eller måned.
+            {t('compete.pointsInfoFooter')}
           </AppText>
         </View>
       </Sheet>

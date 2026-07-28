@@ -14,14 +14,63 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useT } from '@/i18n';
 import { acceptFriendRequest, fetchFriendState, removeFriendship } from '@/lib/api/friends';
 import { infoDialog } from '@/lib/dialogs';
 import { useAuthStore } from '@/lib/store/auth';
 import { useTheme } from '@/theme';
 import type { UserProfile } from '@/types';
 
+/** Godta-knapp i success-farge (Button-komponenten har ingen success-variant) */
+function AcceptButton({
+  title,
+  onPress,
+  loading,
+  disabled,
+}: {
+  title: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  const { colors, radius } = useTheme();
+  const inactive = disabled || loading;
+  return (
+    <Pressable
+      disabled={inactive}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      style={({ pressed }) => ({
+        height: 36,
+        paddingHorizontal: 14,
+        borderRadius: radius.full,
+        backgroundColor: colors.success,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        opacity: inactive ? 0.5 : pressed ? 0.85 : 1,
+      })}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.onAccent} />
+      ) : (
+        <>
+          <Ionicons name="checkmark" size={15} color={colors.onAccent} />
+          <AppText variant="caption" style={{ color: colors.onAccent, fontSize: 13, fontWeight: '600' }}>
+            {title}
+          </AppText>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
 export default function FriendsScreen() {
   const router = useRouter();
+  const t = useT();
   const { colors, spacing, radius } = useTheme();
   const myId = useAuthStore((s) => s.user?.id);
 
@@ -43,9 +92,9 @@ export default function FriendsScreen() {
       setIncoming(state.incoming);
       setOutgoing(state.outgoing);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     }
-  }, [myId]);
+  }, [myId, t]);
 
   // Ved fokus, ikke bare ved mount: RefreshControl er en no-op på web, så uten
   // dette blir listen stående gammel etter en tur til /friends/add.
@@ -69,7 +118,7 @@ export default function FriendsScreen() {
       setIncoming((prev) => prev.filter((p) => p.id !== profile.id));
       setFriends((prev) => [...prev, profile]);
     } catch (e) {
-      infoDialog('Kunne ikke godta', e instanceof Error ? e.message : 'Prøv igjen.');
+      infoDialog(t('profile.friendsAcceptFailed'), e instanceof Error ? e.message : t('error.generic'));
     } finally {
       setBusyId(null);
     }
@@ -84,8 +133,8 @@ export default function FriendsScreen() {
       else setOutgoing((prev) => prev.filter((p) => p.id !== profile.id));
     } catch (e) {
       infoDialog(
-        kind === 'incoming' ? 'Kunne ikke avslå' : 'Kunne ikke trekke tilbake',
-        e instanceof Error ? e.message : 'Prøv igjen.',
+        kind === 'incoming' ? t('profile.friendsDeclineFailed') : t('profile.friendsWithdrawFailed'),
+        e instanceof Error ? e.message : t('error.generic'),
       );
     } finally {
       setBusyId(null);
@@ -127,7 +176,7 @@ export default function FriendsScreen() {
     <Screen padded={false}>
       <View style={{ paddingHorizontal: spacing.screen }}>
         <ScreenHeader
-          title="Venner"
+          title={t('common.friends')}
           right={
             <Pressable
               hitSlop={6}
@@ -168,21 +217,21 @@ export default function FriendsScreen() {
               <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
                 {error}
               </AppText>
-              <Button title="Prøv igjen" variant="secondary" size="sm" onPress={refresh} />
+              <Button title={t('common.retry')} variant="secondary" size="sm" onPress={refresh} />
             </View>
           ) : isEmpty ? (
             <EmptyState
               icon="people-outline"
-              title="Legg til venner med brukernavn"
-              message="Spør vennen din om brukernavnet deres, og søk dem opp for å sende en venneforespørsel."
-              actionTitle="Legg til venn"
+              title={t('profile.friendsEmptyTitle')}
+              message={t('profile.friendsEmptyMessage')}
+              actionTitle={t('profile.friendsAdd')}
               onAction={() => router.push('/friends/add')}
             />
           ) : (
             <>
               {incoming.length > 0 && (
                 <>
-                  {sectionTitle('Forespørsler')}
+                  {sectionTitle(t('profile.friendsRequests'))}
                   <Card padded={false}>
                     {incoming.map((profile, index) => (
                       <View key={profile.id}>
@@ -190,15 +239,14 @@ export default function FriendsScreen() {
                         {personRow(
                           profile,
                           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                            <Button
-                              title="Godta"
-                              size="sm"
+                            <AcceptButton
+                              title={t('profile.friendsAccept')}
                               onPress={() => accept(profile)}
                               loading={busyId === profile.id}
                               disabled={busyId !== null && busyId !== profile.id}
                             />
                             <Button
-                              title="Avslå"
+                              title={t('profile.friendsDecline')}
                               size="sm"
                               variant="secondary"
                               onPress={() => decline(profile, 'incoming')}
@@ -214,7 +262,7 @@ export default function FriendsScreen() {
 
               {outgoing.length > 0 && (
                 <>
-                  {sectionTitle('Sendt')}
+                  {sectionTitle(t('profile.friendsSent'))}
                   <Card padded={false}>
                     {outgoing.map((profile, index) => (
                       <View key={profile.id}>
@@ -222,7 +270,7 @@ export default function FriendsScreen() {
                         {personRow(
                           profile,
                           <Button
-                            title="Trekk tilbake"
+                            title={t('profile.friendsWithdraw')}
                             size="sm"
                             variant="secondary"
                             onPress={() => decline(profile, 'outgoing')}
@@ -238,7 +286,7 @@ export default function FriendsScreen() {
 
               {friends.length > 0 && (
                 <>
-                  {sectionTitle('Venner')}
+                  {sectionTitle(t('common.friends'))}
                   <Card padded={false}>
                     <View style={{ paddingHorizontal: spacing.sm }}>
                       {friends.map((profile, index) => (

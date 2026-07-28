@@ -15,7 +15,7 @@ import {
   subMonths,
   subWeeks,
 } from 'date-fns';
-import { nb } from 'date-fns/locale';
+import { enUS, nb as nbLocale } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -35,6 +35,8 @@ import {
   ScreenHeader,
   SegmentedControl,
 } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { findExercise } from '@/lib/data/exercises';
 import {
   dateKey,
@@ -82,8 +84,17 @@ function Section({
   );
 }
 
+// Ukedagsheader i aktivitetskalenderen, mandag først
+const HEATMAP_DAY_LABELS = {
+  nb: ['M', 'T', 'O', 'T', 'F', 'L', 'S'],
+  en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+} as const;
+
 export default function StatistikkScreen() {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
+  const dateLocale = lang === 'en' ? enUS : nbLocale;
   const router = useRouter();
 
   const workouts = useWorkoutStore((s) => s.workouts);
@@ -100,7 +111,7 @@ export default function StatistikkScreen() {
   const loadOnce = () => {
     setLoadError(null);
     loadWorkouts().catch((error: unknown) =>
-      setLoadError(error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.'),
+      setLoadError(error instanceof Error && error.message ? error.message : t('error.generic')),
     );
   };
 
@@ -116,8 +127,10 @@ export default function StatistikkScreen() {
   const [heatMonth, setHeatMonth] = useState(() => startOfMonth(new Date()));
   const [selectedPrId, setSelectedPrId] = useState<string | null>(null);
 
-  const exerciseName = (id: string): string =>
-    findExercise(id)?.name ?? customExercises.find((e) => e.id === id)?.name ?? 'Ukjent øvelse';
+  const exerciseName = (id: string): string => {
+    const exercise = findExercise(id) ?? customExercises.find((e) => e.id === id);
+    return exercise ? exerciseDisplayName(exercise, lang) : t('stats.unknownExercise');
+  };
 
   // --- Totaler ---
   const totals = useMemo(() => {
@@ -156,10 +169,10 @@ export default function StatistikkScreen() {
       byMonth.set(key, (byMonth.get(key) ?? 0) + w.totalVolumeKg);
     }
     return months.map((m) => ({
-      x: capitalize(format(m, 'MMM', { locale: nb })),
+      x: capitalize(format(m, 'MMM', { locale: dateLocale })),
       y: byMonth.get(format(m, 'yyyy-MM')) ?? 0,
     }));
-  }, [workouts, resolution]);
+  }, [workouts, resolution, dateLocale]);
 
   // --- Økter per uke (siste 8 uker) ---
   const weeklySessions = useMemo(() => {
@@ -172,10 +185,10 @@ export default function StatistikkScreen() {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return weeks.map((ws) => ({
-      label: `Uke ${getISOWeek(ws)}`,
+      label: t('stats.weekLabel', { num: getISOWeek(ws) }),
       value: counts.get(dateKey(ws)) ?? 0,
     }));
-  }, [workouts]);
+  }, [workouts, t]);
 
   // --- Aktivitetskalender: intensitet 1–4 relativt til egen beste dag ---
   const dayVolumes = useMemo(() => volumeByDate(workouts), [workouts]);
@@ -227,7 +240,9 @@ export default function StatistikkScreen() {
   const strengthPoints = useMemo(() => {
     if (!selectedPr) return [];
     return selectedPr.history.map((h) => ({ x: formatShortDate(h.date), y: h.est1RM }));
-  }, [selectedPr]);
+    // lang: formatShortDate leser språket ikke-reaktivt — recompute ved språkbytte
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPr, lang]);
 
   const selectPrExercise = (exerciseId: string) => {
     Haptics.selectionAsync().catch(() => {});
@@ -261,13 +276,13 @@ export default function StatistikkScreen() {
   if (!loaded) {
     return (
       <Screen>
-        <ScreenHeader title="Statistikk" hideBack />
+        <ScreenHeader title={t('stats.title')} hideBack />
         {loadError ? (
           <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl }}>
             <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
               {loadError}
             </AppText>
-            <Button title="Prøv igjen" variant="secondary" size="sm" onPress={loadOnce} />
+            <Button title={t('common.retry')} variant="secondary" size="sm" onPress={loadOnce} />
           </View>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -281,13 +296,13 @@ export default function StatistikkScreen() {
   if (workouts.length === 0) {
     return (
       <Screen>
-        <ScreenHeader title="Statistikk" hideBack />
+        <ScreenHeader title={t('stats.title')} hideBack />
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <EmptyState
             icon="stats-chart-outline"
-            title="Ingen statistikk ennå"
-            message="Fullfør din første økt, så fyller vi denne siden med grafer, trender og rekorder."
-            actionTitle="Start en økt"
+            title={t('stats.emptyTitle')}
+            message={t('stats.emptyMessage')}
+            actionTitle={t('stats.emptyAction')}
             onAction={() => router.push('/(tabs)/trening')}
           />
         </View>
@@ -297,21 +312,21 @@ export default function StatistikkScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Statistikk" hideBack />
+      <ScreenHeader title={t('stats.title')} hideBack />
 
       {/* Totaler i 2x2-grid */}
       <Animated.View entering={FadeInDown.duration(350)} style={{ gap: spacing.md }}>
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View style={{ flex: 1 }}>
             <StatTile
-              label="Økter totalt"
+              label={t('stats.totalWorkouts')}
               value={formatNumber(totals.count)}
               icon="barbell-outline"
             />
           </View>
           <View style={{ flex: 1 }}>
             <StatTile
-              label="Totalt volum"
+              label={t('stats.totalVolume')}
               value={formatVolume(totals.volume)}
               icon="trending-up-outline"
             />
@@ -319,13 +334,19 @@ export default function StatistikkScreen() {
         </View>
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <StatTile label="Streak nå" value={formatNumber(totals.streak)} icon="flame-outline" />
+            <StatTile
+              label={t('stats.currentStreak')}
+              value={formatNumber(totals.streak)}
+              icon="flame"
+              tint={colors.accentWarm}
+            />
           </View>
           <View style={{ flex: 1 }}>
             <StatTile
-              label="Rekorder"
+              label={t('common.records')}
               value={formatNumber(totals.prCount)}
-              icon="trophy-outline"
+              icon="trophy"
+              tint={colors.gold}
             />
           </View>
         </View>
@@ -335,24 +356,24 @@ export default function StatistikkScreen() {
       <View style={{ marginTop: spacing.xl }}>
         <SegmentedControl
           options={[
-            { label: '12 uker', value: 'uker' },
-            { label: '6 måneder', value: 'mnd' },
+            { label: t('stats.seg12Weeks'), value: 'uker' },
+            { label: t('stats.seg6Months'), value: 'mnd' },
           ]}
           value={resolution}
           onChange={(v) => setResolution(v as Resolution)}
         />
       </View>
 
-      <Section title="Treningsvolum" delay={60}>
+      <Section title={t('stats.volumeSection')} delay={60}>
         <Card>
           <LineChart
-            series={[{ label: 'Volum', points: volumePoints }]}
+            series={[{ label: t('common.volume'), points: volumePoints }]}
             yFormatter={(v) => formatCompact(v)}
           />
         </Card>
       </Section>
 
-      <Section title="Økter per uke" delay={120}>
+      <Section title={t('stats.sessionsPerWeek')} delay={120}>
         <Card>
           <BarChart
             data={weeklySessions}
@@ -362,7 +383,7 @@ export default function StatistikkScreen() {
         </Card>
       </Section>
 
-      <Section title="Aktivitetskalender" delay={180}>
+      <Section title={t('stats.activityCalendar')} delay={180}>
         <Card>
           <View
             style={{
@@ -388,7 +409,7 @@ export default function StatistikkScreen() {
               <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
             </Pressable>
             <AppText variant="bodyBold">
-              {capitalize(format(heatMonth, 'MMMM yyyy', { locale: nb }))}
+              {capitalize(format(heatMonth, 'MMMM yyyy', { locale: dateLocale }))}
             </AppText>
             <Pressable
               hitSlop={8}
@@ -407,17 +428,22 @@ export default function StatistikkScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
             </Pressable>
           </View>
-          <CalendarHeatmap month={heatMonth} values={heatValues} onDayPress={onHeatmapDayPress} />
+          <CalendarHeatmap
+            month={heatMonth}
+            values={heatValues}
+            dayLabels={[...HEATMAP_DAY_LABELS[lang]]}
+            onDayPress={onHeatmapDayPress}
+          />
         </Card>
       </Section>
 
-      <Section title="Styrkeutvikling" delay={240}>
+      <Section title={t('stats.strengthSection')} delay={240}>
         {prExercises.length === 0 || !selectedPr ? (
           <Card>
             <EmptyState
               icon="trending-up-outline"
-              title="Loggfør økter for å se utviklingen din"
-              message="Estimert 1RM per øvelse dukker opp her etter hvert som du løfter."
+              title={t('stats.strengthEmptyTitle')}
+              message={t('stats.strengthEmptyMessage')}
             />
           </Card>
         ) : (
@@ -438,14 +464,17 @@ export default function StatistikkScreen() {
             </ScrollView>
             <Card>
               <LineChart
-                series={[{ label: 'Est. 1RM', points: strengthPoints }]}
+                series={[{ label: t('stats.est1RM'), points: strengthPoints }]}
                 yFormatter={(v) => formatKg(v)}
                 showDots
               />
               <View style={{ marginTop: spacing.md }}>
                 <AppText variant="caption" color="secondary">
-                  Beste løft: {formatKg(selectedPr.bestWeightKg)} × {selectedPr.bestReps} (est. 1RM{' '}
-                  {formatKg(selectedPr.bestEst1RM)})
+                  {t('stats.bestLift', {
+                    weight: formatKg(selectedPr.bestWeightKg),
+                    reps: selectedPr.bestReps,
+                    oneRm: formatKg(selectedPr.bestEst1RM),
+                  })}
                 </AppText>
               </View>
             </Card>
@@ -453,7 +482,7 @@ export default function StatistikkScreen() {
         )}
       </Section>
 
-      <Section title="Favorittøvelser" delay={300}>
+      <Section title={t('stats.favoritesSection')} delay={300}>
         <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
           {favorites.map((fav, index) => (
             <View key={fav.exerciseId}>
@@ -491,9 +520,11 @@ export default function StatistikkScreen() {
                     {exerciseName(fav.exerciseId)}
                   </AppText>
                   <AppText variant="caption" color="muted">
-                    {fav.count} {fav.count === 1 ? 'økt' : 'økter'}
+                    {fav.count === 1
+                      ? t('stats.workoutCountOne')
+                      : t('stats.workoutCountMany', { count: fav.count })}
                     {fav.bestWeightKg != null && fav.bestWeightKg > 0
-                      ? ` · Beste: ${formatKg(fav.bestWeightKg)}`
+                      ? ` · ${t('stats.bestWeight', { weight: formatKg(fav.bestWeightKg) })}`
                       : ''}
                   </AppText>
                 </View>
@@ -504,19 +535,19 @@ export default function StatistikkScreen() {
       </Section>
 
       {sortedPrs.length > 0 && (
-        <Section title="Personlige rekorder" delay={360}>
+        <Section title={t('stats.prSection')} delay={360}>
           <Card padded={false} style={{ paddingHorizontal: spacing.md }}>
             {sortedPrs.map((pr, index) => (
               <View key={pr.exerciseId}>
                 {index > 0 && <Divider />}
                 <ListItem
                   title={exerciseName(pr.exerciseId)}
-                  subtitle={`Oppdatert ${formatRelativeDate(pr.updatedAt)}`}
+                  subtitle={t('stats.updatedAt', { date: formatRelativeDate(pr.updatedAt) })}
                   right={
                     <View style={{ alignItems: 'flex-end', gap: 2 }}>
                       <AppText variant="bodyBold">{formatKg(pr.bestWeightKg)}</AppText>
                       <AppText variant="caption" color="muted">
-                        est. 1RM {formatKg(pr.bestEst1RM)}
+                        {t('stats.est1RMValue', { value: formatKg(pr.bestEst1RM) })}
                       </AppText>
                     </View>
                   }

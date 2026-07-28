@@ -14,6 +14,8 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { goalLabel } from '@/i18n/labels';
 import { fetchFriendState, removeFriendship } from '@/lib/api/friends';
 import { fetchProfilesByIds } from '@/lib/api/profiles';
 import { fetchSharedWorkoutsByUser, setLike } from '@/lib/api/workouts';
@@ -21,18 +23,13 @@ import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { firstParam } from '@/lib/params';
 import { useAuthStore } from '@/lib/store/auth';
 import { useTheme } from '@/theme';
-import type { TrainingGoal, UserProfile, Workout, WorkoutComment } from '@/types';
-
-const GOAL_LABELS: Record<TrainingGoal, string> = {
-  styrke: 'Styrke 🏋️',
-  muskelvekst: 'Muskelvekst 💪',
-  utholdenhet: 'Utholdenhet 🏃',
-  helse: 'Helse 🌱',
-};
+import type { UserProfile, Workout, WorkoutComment } from '@/types';
 
 export default function FriendProfileScreen() {
   const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
   const { colors, spacing } = useTheme();
   const myId = useAuthStore((s) => s.user?.id);
 
@@ -62,10 +59,10 @@ export default function FriendProfileScreen() {
         setWorkouts(shared);
       } catch (e) {
         if (isCancelled()) return;
-        setError(e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.');
+        setError(e instanceof Error ? e.message : t('error.generic'));
       }
     },
-    [myId, id],
+    [myId, id, t],
   );
 
   useEffect(() => {
@@ -98,7 +95,7 @@ export default function FriendProfileScreen() {
       await setLike(workout.id, myId, !liked);
     } catch (e) {
       apply(liked); // rull tilbake
-      infoDialog('Kunne ikke oppdatere like', e instanceof Error ? e.message : 'Prøv igjen.');
+      infoDialog(t('profile.friendLikeFailed'), e instanceof Error ? e.message : t('error.generic'));
     }
   };
 
@@ -112,9 +109,9 @@ export default function FriendProfileScreen() {
     if (!myId || !id || !profile) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     confirmDialog({
-      title: 'Fjern venn',
-      message: `${profile.displayName || profile.username} fjernes fra vennelisten, og dere ser ikke lenger hverandres delte økter.`,
-      confirmLabel: 'Fjern venn',
+      title: t('profile.friendRemove'),
+      message: t('profile.friendRemoveConfirm', { name: profile.displayName || profile.username }),
+      confirmLabel: t('profile.friendRemove'),
       destructive: true,
       onConfirm: async () => {
         setRemoving(true);
@@ -122,7 +119,7 @@ export default function FriendProfileScreen() {
           await removeFriendship(myId, id);
           router.back();
         } catch (e) {
-          infoDialog('Kunne ikke fjerne vennen', e instanceof Error ? e.message : 'Prøv igjen.');
+          infoDialog(t('profile.friendRemoveFailed'), e instanceof Error ? e.message : t('error.generic'));
         } finally {
           setRemoving(false);
         }
@@ -133,7 +130,7 @@ export default function FriendProfileScreen() {
   if (loading) {
     return (
       <Screen>
-        <ScreenHeader title="Venn" />
+        <ScreenHeader title={t('profile.friendTitle')} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.accent} />
         </View>
@@ -144,13 +141,13 @@ export default function FriendProfileScreen() {
   if (error) {
     return (
       <Screen>
-        <ScreenHeader title="Venn" />
+        <ScreenHeader title={t('profile.friendTitle')} />
         <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
           <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
             {error}
           </AppText>
           <Button
-            title="Prøv igjen"
+            title={t('common.retry')}
             variant="secondary"
             size="sm"
             onPress={() => {
@@ -166,12 +163,12 @@ export default function FriendProfileScreen() {
   if (!profile || !isFriend) {
     return (
       <Screen>
-        <ScreenHeader title="Venn" />
+        <ScreenHeader title={t('profile.friendTitle')} />
         <EmptyState
           icon="person-remove-outline"
-          title="Fant ikke vennen"
-          message="Dere er kanskje ikke venner lenger, eller lenken er utdatert."
-          actionTitle="Tilbake"
+          title={t('profile.friendNotFoundTitle')}
+          message={t('profile.friendNotFoundMessage')}
+          actionTitle={t('common.back')}
           onAction={() => router.back()}
         />
       </Screen>
@@ -200,18 +197,18 @@ export default function FriendProfileScreen() {
             {profile.bio}
           </AppText>
         ) : null}
-        {profile.goal ? <Chip label={GOAL_LABELS[profile.goal]} selected /> : null}
+        {profile.goal ? <Chip label={goalLabel(profile.goal, lang)} selected /> : null}
       </Card>
 
       {/* Delte økter */}
       <AppText variant="heading" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-        Delte økter
+        {t('profile.friendSharedWorkouts')}
       </AppText>
       {workouts.length === 0 ? (
         <EmptyState
           icon="barbell-outline"
-          title="Ingen delte økter"
-          message={`Øktene ${name} deler dukker opp her.`}
+          title={t('profile.friendNoSharedTitle')}
+          message={t('profile.friendNoSharedMessage', { name })}
         />
       ) : (
         <View style={{ gap: spacing.md }}>
@@ -230,7 +227,7 @@ export default function FriendProfileScreen() {
       {/* Fjern venn */}
       <View style={{ marginTop: spacing.xxl }}>
         <Button
-          title="Fjern venn"
+          title={t('profile.friendRemove')}
           icon="person-remove-outline"
           variant="danger"
           fullWidth

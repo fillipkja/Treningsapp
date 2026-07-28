@@ -14,6 +14,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ExercisePickerSheet } from '@/components/exercises/exercise-picker-sheet';
 import { RestTimer, type RestTimerHandle } from '@/components/workout/rest-timer';
 import { AppText, Button, Card, Input, Screen, Sheet } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { findExercise } from '@/lib/data/exercises';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatDuration, formatKg, formatVolume } from '@/lib/format';
@@ -82,6 +84,7 @@ interface SetRowProps {
 
 function SetRow({ weId, set, index, prev, onOpenRpe, onToggleCompleted }: SetRowProps) {
   const { colors, radius, spacing } = useTheme();
+  const t = useT();
   const updateSet = useWorkoutStore((s) => s.updateSet);
   const removeSet = useWorkoutStore((s) => s.removeSet);
 
@@ -126,7 +129,7 @@ function SetRow({ weId, set, index, prev, onOpenRpe, onToggleCompleted }: SetRow
             }}
           >
             <AppText variant="caption" style={{ color: colors.warning, fontWeight: '700' }}>
-              O
+              {t('workout.warmupShort')}
             </AppText>
           </View>
         ) : (
@@ -218,6 +221,8 @@ interface ExerciseCardProps {
 function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardProps) {
   const { colors, spacing } = useTheme();
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
   const addSet = useWorkoutStore((s) => s.addSet);
   const removeExerciseFromActive = useWorkoutStore((s) => s.removeExerciseFromActive);
   const lastSetsFor = useWorkoutStore((s) => s.lastSetsFor);
@@ -225,14 +230,14 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
 
   const exercise =
     findExercise(we.exerciseId) ?? customExercises.find((e) => e.id === we.exerciseId);
-  const name = exercise?.name ?? 'Ukjent øvelse';
+  const name = exercise ? exerciseDisplayName(exercise, lang) : t('workout.unknownExercise');
   const lastSets = lastSetsFor(we.exerciseId);
 
   const confirmRemove = () => {
     confirmDialog({
-      title: 'Fjern øvelse',
-      message: `Vil du fjerne «${name}» fra økten?`,
-      confirmLabel: 'Fjern',
+      title: t('workout.removeExerciseTitle'),
+      message: t('workout.removeExerciseMessage', { name }),
+      confirmLabel: t('common.remove'),
       destructive: true,
       onConfirm: () => removeExerciseFromActive(we.id),
     });
@@ -268,19 +273,19 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
           }}
         >
           <AppText variant="label" color="muted" style={[labelStyle, { width: COL.set, textAlign: 'center' }]}>
-            Sett
+            {t('workout.colSet')}
           </AppText>
           <AppText variant="label" color="muted" style={[labelStyle, { flex: 1 }]}>
-            Forrige
+            {t('workout.colPrevious')}
           </AppText>
           <AppText variant="label" color="muted" style={[labelStyle, { width: COL.kg, textAlign: 'center' }]}>
-            Kg
+            {t('workout.colKg')}
           </AppText>
           <AppText variant="label" color="muted" style={[labelStyle, { width: COL.reps, textAlign: 'center' }]}>
-            Reps
+            {t('workout.colReps')}
           </AppText>
           <AppText variant="label" color="muted" style={[labelStyle, { width: COL.rpe, textAlign: 'center' }]}>
-            RPE
+            {t('workout.colRpe')}
           </AppText>
           <View style={{ width: COL.check, alignItems: 'center' }}>
             <Ionicons name="checkmark" size={13} color={colors.textMuted} />
@@ -302,7 +307,7 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
 
         <View style={{ marginTop: spacing.sm, alignItems: 'flex-start' }}>
           <Button
-            title="Legg til sett"
+            title={t('workout.addSet')}
             icon="add"
             variant="ghost"
             size="sm"
@@ -317,6 +322,7 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
 export default function ActiveWorkoutScreen() {
   const { colors, spacing, radius } = useTheme();
   const router = useRouter();
+  const t = useT();
 
   const active = useWorkoutStore((s) => s.active);
   const cancelActive = useWorkoutStore((s) => s.cancelActive);
@@ -348,9 +354,9 @@ export default function ActiveWorkoutScreen() {
 
   const confirmCancel = () => {
     confirmDialog({
-      title: 'Avbryt økt?',
-      message: 'Økten forkastes og loggede sett slettes.',
-      confirmLabel: 'Avbryt økt',
+      title: t('workout.cancelTitle'),
+      message: t('workout.cancelMessage'),
+      confirmLabel: t('workout.cancelConfirm'),
       destructive: true,
       onConfirm: () => {
         cancelActive();
@@ -378,7 +384,7 @@ export default function ActiveWorkoutScreen() {
 
   const onPressFinish = () => {
     if (completedCount === 0) {
-      infoDialog('Ingen fullførte sett', 'Fullfør minst ett sett før du lagrer økten.');
+      infoDialog(t('workout.noCompletedSetsTitle'), t('workout.noCompletedSetsMessage'));
       return;
     }
     setShare(user?.shareWorkouts ?? true);
@@ -403,8 +409,8 @@ export default function ActiveWorkoutScreen() {
       // da som aktiv, så brukeren kan prøve igjen (PR/merke-synk kaster ikke)
       setSaving(false);
       infoDialog(
-        'Kunne ikke lagre økten',
-        error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+        t('workout.saveFailedTitle'),
+        error instanceof Error ? error.message : t('error.generic'),
       );
     }
   };
@@ -486,7 +492,7 @@ export default function ActiveWorkoutScreen() {
           })}
         >
           <AppText variant="bodyBold" color="onAccent">
-            Fullfør
+            {t('workout.finish')}
           </AppText>
         </Pressable>
       </View>
@@ -507,9 +513,9 @@ export default function ActiveWorkoutScreen() {
           {active.exercises.length === 0 ? (
             <Card style={{ alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl }}>
               <Ionicons name="barbell-outline" size={32} color={colors.textMuted} />
-              <AppText variant="subheading">Ingen øvelser ennå</AppText>
+              <AppText variant="subheading">{t('workout.emptyTitle')}</AppText>
               <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-                Legg til den første øvelsen for å komme i gang.
+                {t('workout.emptyMessage')}
               </AppText>
             </Card>
           ) : (
@@ -525,7 +531,7 @@ export default function ActiveWorkoutScreen() {
           )}
 
           <Button
-            title="Legg til øvelse"
+            title={t('workout.addExercise')}
             icon="add"
             variant="secondary"
             fullWidth
@@ -533,8 +539,8 @@ export default function ActiveWorkoutScreen() {
           />
 
           <Input
-            label="Notater"
-            placeholder="Hvordan gikk økten?"
+            label={t('workout.notesLabel')}
+            placeholder={t('workout.notesPlaceholder')}
             defaultValue={active.notes}
             maxLength={2000}
             onChangeText={(t) => updateActive({ notes: t })}
@@ -543,7 +549,7 @@ export default function ActiveWorkoutScreen() {
           />
 
           <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            Tips: hold inne settnummeret for å markere oppvarmingssett
+            {t('workout.warmupTip')}
           </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -564,9 +570,9 @@ export default function ActiveWorkoutScreen() {
       />
 
       {/* RPE-velger */}
-      <Sheet visible={rpeTarget !== null} onClose={() => setRpeTarget(null)} title="RPE">
+      <Sheet visible={rpeTarget !== null} onClose={() => setRpeTarget(null)} title={t('workout.rpeTitle')}>
         <AppText variant="caption" color="muted" style={{ marginBottom: spacing.md }}>
-          Hvor hardt var settet? 6 = lett, 10 = maks innsats.
+          {t('workout.rpeHelp')}
         </AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {RPE_VALUES.map((value) => {
@@ -601,7 +607,7 @@ export default function ActiveWorkoutScreen() {
         </View>
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
           <Button
-            title="Fjern RPE"
+            title={t('workout.rpeClear')}
             variant="ghost"
             size="sm"
             onPress={() => {
@@ -618,14 +624,14 @@ export default function ActiveWorkoutScreen() {
         onClose={() => {
           if (!saving) setFinishVisible(false);
         }}
-        title="Fullfør økt"
+        title={t('workout.finishTitle')}
       >
         <View style={{ gap: spacing.lg }}>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {[
-              { label: 'Varighet', value: formatDuration(durationMin) },
-              { label: 'Volum', value: formatVolume(workoutVolume(active.exercises)) },
-              { label: 'Sett', value: String(completedSetCount(active.exercises)) },
+              { label: t('workout.duration'), value: formatDuration(durationMin) },
+              { label: t('common.volume'), value: formatVolume(workoutVolume(active.exercises)) },
+              { label: t('common.sets'), value: String(completedSetCount(active.exercises)) },
             ].map((stat) => (
               <View
                 key={stat.label}
@@ -653,9 +659,9 @@ export default function ActiveWorkoutScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
           >
             <View style={{ flex: 1 }}>
-              <AppText variant="bodyBold">Del med venner</AppText>
+              <AppText variant="bodyBold">{t('workout.shareTitle')}</AppText>
               <AppText variant="caption" color="muted">
-                Økten vises i feeden til vennene dine.
+                {t('workout.shareDescription')}
               </AppText>
             </View>
             <Switch
@@ -667,7 +673,7 @@ export default function ActiveWorkoutScreen() {
             />
           </Pressable>
 
-          <Button title="Lagre økt" fullWidth size="lg" loading={saving} onPress={onSave} />
+          <Button title={t('workout.saveWorkout')} fullWidth size="lg" loading={saving} onPress={onSave} />
         </View>
       </Sheet>
     </Screen>

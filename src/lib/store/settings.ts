@@ -3,10 +3,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
+export type AppLanguage = 'nb' | 'en';
 
 interface SettingsState {
   /** Mørkt tema er standard */
   themeMode: ThemeMode;
+  /** Appspråk — norsk er standard */
+  language: AppLanguage;
+  setLanguage: (language: AppLanguage) => void;
   pushEnabled: boolean;
   /** Påminnelser om planlagte økter */
   workoutReminders: boolean;
@@ -30,6 +34,8 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       themeMode: 'dark',
+      language: 'nb',
+      setLanguage: (language) => set({ language }),
       pushEnabled: true,
       workoutReminders: true,
       reminderTime: '17:00',

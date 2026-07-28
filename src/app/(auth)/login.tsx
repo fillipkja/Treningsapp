@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Button, Input, Screen } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth';
 import { useTheme } from '@/theme';
 
 /** Innlogging med e-post og passord via Supabase. */
 export default function LoginScreen() {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
 
@@ -22,7 +25,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (loading) return;
     if (!email.trim() || !password) {
-      setError('Fyll inn e-post og passord.');
+      setError(t('auth.fillEmailAndPassword'));
       return;
     }
     setLoading(true);
@@ -53,23 +56,25 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(400)}
             style={{ alignItems: 'center', gap: spacing.md }}
           >
-            <View
+            <LinearGradient
+              colors={colors.gradientAccent}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
                 width: 88,
                 height: 88,
                 borderRadius: radius.xl,
-                backgroundColor: colors.accentMuted,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="barbell" size={44} color={colors.accent} />
-            </View>
+              <Ionicons name="barbell" size={44} color={colors.onAccent} />
+            </LinearGradient>
             <AppText variant="hero" color="accent">
               LØFT
             </AppText>
             <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              Logg økter. Følg venner. Sett rekorder.
+              {t('auth.tagline')}
             </AppText>
           </Animated.View>
 
@@ -78,26 +83,26 @@ export default function LoginScreen() {
             style={{ gap: spacing.lg }}
           >
             <Input
-              label="E-post"
+              label={t('auth.emailLabel')}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
                 if (error) setError(undefined);
               }}
-              placeholder="deg@epost.no"
+              placeholder={t('auth.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
             />
             <Input
-              label="Passord"
+              label={t('auth.passwordLabel')}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
                 if (error) setError(undefined);
               }}
-              placeholder="Passordet ditt"
+              placeholder={t('auth.passwordPlaceholderLogin')}
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password"
@@ -109,7 +114,7 @@ export default function LoginScreen() {
               </AppText>
             ) : null}
             <Button
-              title="Logg inn"
+              title={t('auth.signIn')}
               size="lg"
               fullWidth
               loading={loading}
@@ -121,7 +126,10 @@ export default function LoginScreen() {
               style={({ pressed }) => ({ alignSelf: 'center', opacity: pressed ? 0.7 : 1 })}
             >
               <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                Ny her? <AppText variant="bodyBold" color="accent">Opprett konto</AppText>
+                {t('auth.noAccountPrompt')}{' '}
+                <AppText variant="bodyBold" color="accent">
+                  {t('auth.createAccount')}
+                </AppText>
               </AppText>
             </Pressable>
           </Animated.View>

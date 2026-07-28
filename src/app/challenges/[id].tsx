@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -16,6 +17,8 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { t as translate, useLanguage, useT } from '@/i18n';
+import { challengeTypeLabel } from '@/i18n/labels';
 import { fetchStandings, type ChallengeStanding } from '@/lib/api/challenges';
 import { fetchProfilesByIds } from '@/lib/api/profiles';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
@@ -24,23 +27,16 @@ import { firstParam } from '@/lib/params';
 import { useAuthStore } from '@/lib/store/auth';
 import { useChallengeStore } from '@/lib/store/challenges';
 import { useProgramStore } from '@/lib/store/programs';
-import { useTheme, type ThemeColors } from '@/theme';
+import { challengeTypeColors, tierColors, useTheme } from '@/theme';
 import type { ChallengeType, UserProfile } from '@/types';
 
-const TYPE_META: Record<ChallengeType, { label: string; icon: keyof typeof Ionicons.glyphMap; unit: string }> = {
-  økter: { label: 'Antall økter', icon: 'calendar', unit: 'økter' },
-  volum: { label: 'Løftet volum', icon: 'barbell', unit: 'kg' },
-  prs: { label: 'Personlige rekorder', icon: 'trophy', unit: 'rekorder' },
-  program: { label: 'Fullfør program', icon: 'flag', unit: 'økter' },
+/** Ikon per utfordringstype — fast tilordning, farge følger typen */
+const TYPE_ICON: Record<ChallengeType, keyof typeof Ionicons.glyphMap> = {
+  økter: 'checkmark-done',
+  volum: 'barbell',
+  prs: 'star',
+  program: 'map',
 };
-
-/** Gull/sølv/bronse. Bronse finnes ikke i paletten — samme unntak som i badges. */
-function medalColor(rank: number, colors: ThemeColors): string | undefined {
-  if (rank === 1) return colors.gold;
-  if (rank === 2) return colors.textSecondary;
-  if (rank === 3) return '#b08d57';
-  return undefined;
-}
 
 /** Score per deltaker etter utfordringstype */
 function scoreOf(type: ChallengeType, standing: ChallengeStanding): number {
@@ -56,11 +52,6 @@ function scoreOf(type: ChallengeType, standing: ChallengeStanding): number {
   }
 }
 
-function formatScore(type: ChallengeType, value: number): string {
-  if (type === 'volum') return formatVolume(value);
-  return `${formatNumber(value)} ${TYPE_META[type].unit}`;
-}
-
 interface RankedStanding extends ChallengeStanding {
   score: number;
   rank: number;
@@ -69,7 +60,10 @@ interface RankedStanding extends ChallengeStanding {
 export default function ChallengeDetailScreen() {
   const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
+  const mode = isDark ? 'dark' : 'light';
+  const t = useT();
+  const lang = useLanguage();
 
   const me = useAuthStore((s) => s.user);
   const items = useChallengeStore((s) => s.items);
@@ -90,7 +84,7 @@ export default function ChallengeDetailScreen() {
   useEffect(() => {
     if (storeLoaded || storeLoading || storeError) return;
     loadChallenges().catch((error) =>
-      setStoreError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.'),
+      setStoreError(error instanceof Error ? error.message : translate('error.generic')),
     );
   }, [storeLoaded, storeLoading, storeError, loadChallenges]);
 
@@ -112,7 +106,7 @@ export default function ChallengeDetailScreen() {
         setProfiles(map);
       } catch (error) {
         if (isCancelled()) return;
-        setStandingsError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.');
+        setStandingsError(error instanceof Error ? error.message : translate('error.generic'));
       }
     },
     [id],
@@ -148,7 +142,7 @@ export default function ChallengeDetailScreen() {
     if (!storeLoaded && !storeError) {
       return (
         <Screen>
-          <ScreenHeader title="Utfordring" />
+          <ScreenHeader title={t('compete.challengeTitle')} />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={colors.accent} />
           </View>
@@ -157,20 +151,20 @@ export default function ChallengeDetailScreen() {
     }
     return (
       <Screen>
-        <ScreenHeader title="Utfordring" />
+        <ScreenHeader title={t('compete.challengeTitle')} />
         {storeError ? (
           <View style={{ alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxl }}>
             <AppText variant="caption" color="danger" style={{ textAlign: 'center' }}>
               {storeError}
             </AppText>
             <Button
-              title="Prøv igjen"
+              title={t('common.retry')}
               size="sm"
               variant="secondary"
               onPress={() => {
                 setStoreError(null);
                 loadChallenges().catch((error) =>
-                  setStoreError(error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.'),
+                  setStoreError(error instanceof Error ? error.message : translate('error.generic')),
                 );
               }}
             />
@@ -178,20 +172,27 @@ export default function ChallengeDetailScreen() {
         ) : (
           <EmptyState
             icon="trophy-outline"
-            title="Fant ikke utfordringen"
-            message="Den kan være slettet, eller du er ikke lenger deltaker."
+            title={t('compete.notFoundTitle')}
+            message={t('compete.notFoundBody')}
           />
         )}
       </Screen>
     );
   }
 
-  const meta = TYPE_META[challenge.type];
+  const tint = challengeTypeColors[mode][challenge.type];
   const program = challenge.programId
     ? programs.find((p) => p.id === challenge.programId)
     : undefined;
   const target =
     challenge.target ?? (challenge.type === 'program' ? program?.days.length : undefined);
+
+  const formatScore = (value: number): string => {
+    if (challenge.type === 'volum') return formatVolume(value);
+    return t(challenge.type === 'prs' ? 'compete.recordsCount' : 'compete.workoutsCount', {
+      count: formatNumber(value),
+    });
+  };
 
   const start = parseISO(challenge.startDate);
   const end = parseISO(challenge.endDate);
@@ -202,26 +203,28 @@ export default function ChallengeDetailScreen() {
   const ended = nowMs > end.getTime();
   const daysLeft = Math.max(0, differenceInCalendarDays(end, new Date()));
   const daysLabel = ended
-    ? 'Avsluttet'
+    ? t('compete.ended')
     : daysLeft <= 0
-      ? 'Siste dag'
+      ? t('compete.lastDay')
       : daysLeft === 1
-        ? '1 dag igjen'
-        : `${daysLeft} dager igjen`;
+        ? t('compete.oneDayLeft')
+        : t('common.daysLeft', { count: daysLeft });
 
   const isCreator = me?.id === challenge.creatorId;
 
   const nameOf = (userId: string): string =>
-    userId === me?.id ? 'Deg' : (profiles.get(userId)?.displayName ?? 'Ukjent');
+    userId === me?.id
+      ? t('common.you')
+      : (profiles.get(userId)?.displayName ?? t('compete.unknownUser'));
 
   const goBack = () =>
     router.canGoBack() ? router.back() : router.replace('/(tabs)/konkurranser');
 
   const confirmDelete = () => {
     confirmDialog({
-      title: 'Slett utfordring',
-      message: `Vil du slette «${challenge.name}» for alle deltakerne?`,
-      confirmLabel: 'Slett',
+      title: t('compete.deleteChallenge'),
+      message: t('compete.deleteConfirm', { name: challenge.name }),
+      confirmLabel: t('common.delete'),
       destructive: true,
       onConfirm: () => {
         void (async () => {
@@ -233,8 +236,8 @@ export default function ChallengeDetailScreen() {
           } catch (error) {
             setBusy(false);
             infoDialog(
-              'Kunne ikke slette utfordringen',
-              error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+              t('compete.deleteError'),
+              error instanceof Error ? error.message : t('error.generic'),
             );
           }
         })();
@@ -244,9 +247,9 @@ export default function ChallengeDetailScreen() {
 
   const confirmLeave = () => {
     confirmDialog({
-      title: 'Forlat utfordring',
-      message: `Vil du forlate «${challenge.name}»? Du mister plassen din i stillingen.`,
-      confirmLabel: 'Forlat',
+      title: t('compete.leaveChallenge'),
+      message: t('compete.leaveConfirm', { name: challenge.name }),
+      confirmLabel: t('compete.leave'),
       destructive: true,
       onConfirm: () => {
         void (async () => {
@@ -257,8 +260,8 @@ export default function ChallengeDetailScreen() {
           } catch (error) {
             setBusy(false);
             infoDialog(
-              'Kunne ikke forlate utfordringen',
-              error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.',
+              t('compete.leaveError'),
+              error instanceof Error ? error.message : t('error.generic'),
             );
           }
         })();
@@ -269,7 +272,14 @@ export default function ChallengeDetailScreen() {
   const renderRow = (row: RankedStanding) => {
     const profile = profiles.get(row.userId);
     const isMe = row.userId === me?.id;
-    const medal = medalColor(row.rank, colors);
+    const medal =
+      row.rank === 1
+        ? tierColors[mode].gull
+        : row.rank === 2
+          ? tierColors[mode].sølv
+          : row.rank === 3
+            ? tierColors[mode].bronse
+            : undefined;
     const reached = !!target && row.score >= target;
     return (
       <View
@@ -320,14 +330,14 @@ export default function ChallengeDetailScreen() {
             <AppText variant="bodyBold" numberOfLines={1} style={{ flexShrink: 1 }}>
               {nameOf(row.userId)}
             </AppText>
-            <AppText variant="bodyBold" color={reached ? 'success' : 'accent'}>
-              {formatScore(challenge.type, row.score)}
+            <AppText variant="bodyBold" style={{ color: reached ? colors.success : tint }}>
+              {formatScore(row.score)}
             </AppText>
           </View>
           {target && target > 0 ? (
             <ProgressBar
               progress={row.score / target}
-              color={reached ? colors.success : undefined}
+              color={reached ? colors.success : tint}
               height={5}
             />
           ) : null}
@@ -341,7 +351,7 @@ export default function ChallengeDetailScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Utfordring" />
+      <ScreenHeader title={t('compete.challengeTitle')} />
 
       <Animated.View entering={FadeInDown.duration(300)} style={{ gap: spacing.lg }}>
         {/* Toppkort med tidslinje */}
@@ -353,21 +363,21 @@ export default function ChallengeDetailScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: radius.md,
-                  backgroundColor: colors.accentMuted,
+                  backgroundColor: `${tint}29`,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name={meta.icon} size={24} color={colors.accent} />
+                <Ionicons name={TYPE_ICON[challenge.type]} size={24} color={tint} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <AppText variant="heading" numberOfLines={2}>
                   {challenge.name}
                 </AppText>
                 <AppText variant="caption" color="muted">
-                  {meta.label}
+                  {challengeTypeLabel(challenge.type, lang)}
                   {program ? ` · ${program.name}` : ''}
-                  {target ? ` · Mål: ${formatScore(challenge.type, target)}` : ''}
+                  {target ? ` · ${t('compete.goalLabel', { value: formatScore(target) })}` : ''}
                 </AppText>
               </View>
             </View>
@@ -380,20 +390,20 @@ export default function ChallengeDetailScreen() {
               </AppText>
               <AppText
                 variant="caption"
-                color={ended ? 'muted' : 'accent'}
-                style={{ fontWeight: '600' }}
+                color={ended ? 'muted' : undefined}
+                style={ended ? { fontWeight: '600' } : { fontWeight: '600', color: tint }}
               >
                 {daysLabel}
               </AppText>
             </View>
-            <ProgressBar progress={timeProgress} />
+            <ProgressBar progress={timeProgress} color={ended ? undefined : tint} />
           </View>
         </Card>
 
         {/* Stillingen / resultat */}
         <View style={{ gap: spacing.md }}>
           <AppText variant="label" color="muted">
-            {ended ? 'Resultat' : 'Stillingen'}
+            {ended ? t('compete.result') : t('compete.standings')}
           </AppText>
 
           {standingsError ? (
@@ -403,7 +413,7 @@ export default function ChallengeDetailScreen() {
                   {standingsError}
                 </AppText>
                 <Button
-                  title="Prøv igjen"
+                  title={t('common.retry')}
                   size="sm"
                   variant="secondary"
                   onPress={() => void loadStandings()}
@@ -415,14 +425,14 @@ export default function ChallengeDetailScreen() {
               <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg }}>
                 <ActivityIndicator color={colors.accent} />
                 <AppText variant="caption" color="muted">
-                  Henter stillingen …
+                  {t('compete.loadingStandings')}
                 </AppText>
               </View>
             </Card>
           ) : ranked.length === 0 ? (
             <Card>
               <AppText variant="caption" color="muted">
-                Ingen deltakere i utfordringen.
+                {t('compete.noParticipants')}
               </AppText>
             </Card>
           ) : (
@@ -431,7 +441,20 @@ export default function ChallengeDetailScreen() {
               {winners.length > 0 ? (
                 <Card>
                   <View style={{ alignItems: 'center', gap: spacing.sm }}>
-                    <AppText style={{ fontSize: 40 }}>🏆</AppText>
+                    <LinearGradient
+                      colors={[...colors.gradientGold]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: radius.full,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="trophy" size={28} color={colors.onAccent} />
+                    </LinearGradient>
                     <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                       {winners.map((w) => {
                         const profile = profiles.get(w.userId);
@@ -441,7 +464,7 @@ export default function ChallengeDetailScreen() {
                             style={{
                               padding: 3,
                               borderWidth: 3,
-                              borderColor: colors.gold,
+                              borderColor: tierColors[mode].gull,
                               borderRadius: radius.full,
                             }}
                           >
@@ -456,10 +479,12 @@ export default function ChallengeDetailScreen() {
                       })}
                     </View>
                     <AppText variant="subheading" style={{ textAlign: 'center' }}>
-                      {winners.map((w) => nameOf(w.userId)).join(' og ')}
+                      {winners.map((w) => nameOf(w.userId)).join(t('compete.andSeparator'))}
                     </AppText>
                     <AppText variant="caption" color="muted">
-                      {`${winners.length > 1 ? 'Delt førsteplass' : 'Vant'} med ${formatScore(challenge.type, winners[0].score)}`}
+                      {winners.length > 1
+                        ? t('compete.sharedFirstWith', { score: formatScore(winners[0].score) })
+                        : t('compete.wonWith', { score: formatScore(winners[0].score) })}
                     </AppText>
                   </View>
                 </Card>
@@ -478,7 +503,7 @@ export default function ChallengeDetailScreen() {
         <View style={{ marginTop: spacing.sm }}>
           {isCreator ? (
             <Button
-              title="Slett utfordring"
+              title={t('compete.deleteChallenge')}
               icon="trash-outline"
               variant="danger"
               fullWidth
@@ -487,7 +512,7 @@ export default function ChallengeDetailScreen() {
             />
           ) : (
             <Button
-              title="Forlat utfordring"
+              title={t('compete.leaveChallenge')}
               icon="exit-outline"
               variant="secondary"
               fullWidth

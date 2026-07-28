@@ -4,8 +4,16 @@
 // ved feil — kallere fanger med try/catch og viser meldingen i UI.
 
 import { norskFeil } from '@/lib/api/errors';
+import { mapProfileRow, type ProfileRow } from '@/lib/api/mappers';
 import { supabase } from '@/lib/supabase';
-import type { AppNotification, NotificationType } from '@/types';
+import type { AppNotification, NotificationType, UserProfile } from '@/types';
+
+/**
+ * Varsel med innebygd aktørprofil (hvem som utløste varselet). Brukes til å
+ * komponere lokalisert varseltekst klientside; lagret title/body er fallback
+ * for gamle varsler og ukjente typer.
+ */
+export type NotificationWithActor = AppNotification & { actor?: UserProfile };
 
 interface NotificationRow {
   id: string;
@@ -16,9 +24,11 @@ interface NotificationRow {
   ref_id: string | null;
   read: boolean;
   created_at: string;
+  /** Fylles av .select('*, actor:profiles!notifications_actor_id_fkey(*)') */
+  actor?: ProfileRow | null;
 }
 
-function mapNotificationRow(row: NotificationRow): AppNotification {
+function mapNotificationRow(row: NotificationRow): NotificationWithActor {
   return {
     id: row.id,
     // Databasen har også typen 'venn_akseptert' som ikke finnes i domenetypen;
@@ -29,14 +39,15 @@ function mapNotificationRow(row: NotificationRow): AppNotification {
     createdAt: row.created_at,
     read: row.read,
     refId: row.ref_id ?? undefined,
+    actor: row.actor ? mapProfileRow(row.actor) : undefined,
   };
 }
 
-/** Mine varsler, nyeste først (RLS filtrerer til egen bruker) */
-export async function fetchNotifications(): Promise<AppNotification[]> {
+/** Mine varsler med aktørprofil, nyeste først (RLS filtrerer til egen bruker) */
+export async function fetchNotifications(): Promise<NotificationWithActor[]> {
   const { data, error } = await supabase
     .from('notifications')
-    .select('*')
+    .select('*, actor:profiles!notifications_actor_id_fkey(*)')
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw new Error(norskFeil(error));

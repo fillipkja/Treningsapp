@@ -22,10 +22,12 @@ export interface StatTileProps {
   /** Trendserie → sparkline nederst i accent */
   trend?: number[];
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Overstyrer accent for ikon og trend-sparkline (delta beholder god/dårlig-farge) */
+  tint?: string;
   onPress?: () => void;
 }
 
-export function StatTile({ label, value, delta, trend, icon, onPress }: StatTileProps) {
+export function StatTile({ label, value, delta, trend, icon, tint, onPress }: StatTileProps) {
   const { colors, spacing, radius, typography } = useTheme();
   const [innerWidth, setInnerWidth] = useState(0);
 
@@ -55,7 +57,7 @@ export function StatTile({ label, value, delta, trend, icon, onPress }: StatTile
         <Text style={[typography.label, { color: colors.textMuted }]} numberOfLines={1}>
           {label}
         </Text>
-        {icon != null && <Ionicons name={icon} size={16} color={colors.textMuted} />}
+        {icon != null && <Ionicons name={icon} size={16} color={tint ?? colors.textMuted} />}
       </View>
 
       {/* Proporsjonale siffer (default) — aldri tabular-nums på store tall */}
@@ -76,7 +78,7 @@ export function StatTile({ label, value, delta, trend, icon, onPress }: StatTile
 
       {trend != null && trend.length > 1 && innerWidth > 0 && (
         <View style={{ marginTop: spacing.sm }}>
-          <Sparkline points={trend} width={innerWidth} height={26} color={colors.accent} />
+          <Sparkline points={trend} width={innerWidth} height={26} color={tint ?? colors.accent} />
         </View>
       )}
     </Pressable>

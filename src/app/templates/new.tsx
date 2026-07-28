@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { TemplateExerciseEditor } from '@/components/workout/template-exercise-editor';
 import { AppText, Button, Input, Screen, ScreenHeader } from '@/components/ui';
+import { useT } from '@/i18n';
 import { infoDialog } from '@/lib/dialogs';
 import { useProgramStore } from '@/lib/store/programs';
 import { useTheme } from '@/theme';
@@ -22,6 +23,7 @@ function sanitize(exercise: TemplateExercise): TemplateExercise {
 
 export default function NewTemplateScreen() {
   const router = useRouter();
+  const t = useT();
   const { spacing } = useTheme();
   const addTemplate = useProgramStore((s) => s.addTemplate);
 
@@ -33,11 +35,11 @@ export default function NewTemplateScreen() {
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError('Gi favorittøkten et navn.');
+      setNameError(t('training.templateNameRequired'));
       return;
     }
     if (exercises.length === 0) {
-      infoDialog('Mangler øvelser', 'Legg til minst én øvelse.');
+      infoDialog(t('training.missingExercisesTitle'), t('training.addAtLeastOneExercise'));
       return;
     }
     setSaving(true);
@@ -52,8 +54,8 @@ export default function NewTemplateScreen() {
     } catch (error) {
       setSaving(false);
       infoDialog(
-        'Kunne ikke lagre favorittøkten',
-        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+        t('training.saveTemplateError'),
+        error instanceof Error && error.message ? error.message : t('error.generic'),
       );
     }
   };
@@ -64,12 +66,12 @@ export default function NewTemplateScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen scroll>
-        <ScreenHeader title="Ny favorittøkt" />
+        <ScreenHeader title={t('training.newTemplate')} />
 
         <View style={{ gap: spacing.lg }}>
           <Input
-            label="Navn"
-            placeholder="F.eks. Rask overkropp"
+            label={t('training.nameLabel')}
+            placeholder={t('training.templateNamePlaceholder')}
             value={name}
             maxLength={80}
             onChangeText={(text) => {
@@ -80,14 +82,14 @@ export default function NewTemplateScreen() {
           />
 
           <AppText variant="heading" style={{ marginTop: spacing.sm }}>
-            Øvelser
+            {t('training.exercisesSection')}
           </AppText>
 
           <TemplateExerciseEditor exercises={exercises} onChange={setExercises} />
 
           <View style={{ marginTop: spacing.sm }}>
             <Button
-              title="Lagre favorittøkt"
+              title={t('training.saveTemplate')}
               icon="checkmark"
               size="lg"
               fullWidth

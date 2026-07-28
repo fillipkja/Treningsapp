@@ -22,7 +22,6 @@ export const EXERCISES: Exercise[] = [
       'Press stangen rett opp til armene er strake.',
     ],
     tips: ['Hold skulderbladene samlet og trukket ned gjennom hele løftet.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'skrabenkpress-stang',
@@ -39,7 +38,6 @@ export const EXERCISES: Exercise[] = [
       'Press stangen opp igjen til strake armer.',
     ],
     tips: ['Ikke la albuene sprike helt ut — hold dem i ca. 45 grader.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'nedoverbenkpress',
@@ -56,7 +54,6 @@ export const EXERCISES: Exercise[] = [
       'Press stangen opp til armene er strake.',
     ],
     tips: ['Bruk gjerne en spotter når du løfter tungt.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'benkpress-manualer',
@@ -72,7 +69,6 @@ export const EXERCISES: Exercise[] = [
       'Press dem opp igjen til armene er nesten strake.',
     ],
     tips: ['La manualene møtes lett på toppen for full sammentrekning.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'skrabenk-manualer',
@@ -89,7 +85,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Senk manualene dypt for godt strekk i øvre bryst.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'flyes-manualer',
@@ -105,7 +100,6 @@ export const EXERCISES: Exercise[] = [
       'Før manualene tilbake i samme bue.',
     ],
     tips: ['Behold samme albuevinkel hele veien — ikke gjør det til en press.'],
-    mediaEmoji: '🦅',
   },
   {
     id: 'skra-flyes-manualer',
@@ -121,7 +115,6 @@ export const EXERCISES: Exercise[] = [
       'Klem brystet sammen og før manualene tilbake.',
     ],
     tips: ['Bruk moderat vekt — øvelsen handler om strekk, ikke tonnasje.'],
-    mediaEmoji: '🦅',
   },
   {
     id: 'pullover-manualer',
@@ -137,7 +130,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk den tilbake over brystet i en kontrollert bue.',
     ],
     tips: ['Kjenn strekket i bryst og lats — ikke gå lenger enn skuldrene tillater.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'brystpress-maskin',
@@ -153,7 +145,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake uten å slippe vekten helt ned.',
     ],
     tips: ['Hold skuldrene senket og ryggen mot puten.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'pec-deck',
@@ -169,7 +160,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake til du kjenner strekk i brystet.',
     ],
     tips: ['Hold en kort pause i klemmen for maksimal kontakt.'],
-    mediaEmoji: '🦋',
   },
   {
     id: 'kabelkryss',
@@ -186,7 +176,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake til strekk i brystet.',
     ],
     tips: ['La hendene krysse litt for ekstra sammentrekning.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'kabelkryss-lav',
@@ -202,7 +191,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til start.',
     ],
     tips: ['Treffer øvre bryst — hold lett bøy i albuene hele veien.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'pushups',
@@ -218,7 +206,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen til strake armer.',
     ],
     tips: ['Stram magen og setet slik at hoften ikke synker.'],
-    mediaEmoji: '🤸',
   },
   {
     id: 'brede-pushups',
@@ -234,7 +221,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen uten å låse albuene hardt.',
     ],
     tips: ['Bredere grep gir mer bryst og mindre triceps.'],
-    mediaEmoji: '🤸',
   },
   {
     id: 'dips',
@@ -250,7 +236,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen til strake armer.',
     ],
     tips: ['Mer fremoverlening treffer brystet, oppreist treffer triceps.'],
-    mediaEmoji: '🦍',
   },
   {
     id: 'gulvpress-stang',
@@ -266,7 +251,6 @@ export const EXERCISES: Exercise[] = [
       'Press stangen opp igjen til strake armer.',
     ],
     tips: ['Kort pause når overarmene treffer gulvet gir ekstra tricepsjobb.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'brystpress-strikk',
@@ -282,7 +266,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Gå lenger frem for mer motstand.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'benkpress-smith',
@@ -298,7 +281,6 @@ export const EXERCISES: Exercise[] = [
       'Press rett opp og lås stangen tilbake når settet er ferdig.',
     ],
     tips: ['Fin variant for å presse nær utmattelse uten spotter.'],
-    mediaEmoji: '🦾',
   },
   // ============================================================
   // RYGG
@@ -318,7 +300,6 @@ export const EXERCISES: Exercise[] = [
       'Avslutt oppreist med hoften helt frem, og senk kontrollert ned.',
     ],
     tips: ['Hold stangen tett inntil kroppen hele veien.', 'Tenk «skyv gulvet vekk» i stedet for å dra med ryggen.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'roing-stang',
@@ -335,7 +316,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Klem skulderbladene sammen på toppen av hvert drag.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 'pendlay-roing',
@@ -351,7 +331,6 @@ export const EXERCISES: Exercise[] = [
       'Senk stangen helt ned til gulvet mellom hver repetisjon.',
     ],
     tips: ['Hver rep starter fra dødpunkt — ingen gynging.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 't-bar-roing',
@@ -368,7 +347,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Hold overkroppen stabil — unngå å rykke med hoften.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 'pullups',
@@ -384,7 +362,6 @@ export const EXERCISES: Exercise[] = [
       'Senk deg kontrollert helt ned til strake armer.',
     ],
     tips: ['Start hvert drag ved å trekke skulderbladene ned.', 'Bruk strikk eller maskin som avlastning om du trenger det.'],
-    mediaEmoji: '🧗',
   },
   {
     id: 'chins',
@@ -400,7 +377,6 @@ export const EXERCISES: Exercise[] = [
       'Senk deg kontrollert tilbake til strake armer.',
     ],
     tips: ['Underhåndsgrepet gir mer bicepshjelp enn pullups.'],
-    mediaEmoji: '🧗',
   },
   {
     id: 'nedtrekk',
@@ -416,7 +392,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp til strake armer.',
     ],
     tips: ['Len deg bare lett bakover — ikke sving med overkroppen.'],
-    mediaEmoji: '⬇️',
   },
   {
     id: 'nedtrekk-smalt',
@@ -432,7 +407,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp igjen.',
     ],
     tips: ['Tenk på å dra albuene ned i lomma.'],
-    mediaEmoji: '⬇️',
   },
   {
     id: 'sittende-kabelroing',
@@ -448,7 +422,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert frem og la skulderbladene gli fra hverandre.',
     ],
     tips: ['Hold overkroppen tilnærmet i ro — draget skjer med ryggen.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 'enarms-kabelroing',
@@ -464,7 +437,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert frem med full strekk i lats.',
     ],
     tips: ['Stå stabilt og unngå å rotere overkroppen.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 'enarms-roing-manualer',
@@ -481,7 +453,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Dra med albuen tett inntil kroppen, ikke ut til siden.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'bryststottet-roing-manualer',
@@ -497,7 +468,6 @@ export const EXERCISES: Exercise[] = [
       'Klem skulderbladene sammen på toppen og senk kontrollert.',
     ],
     tips: ['Benkstøtten fjerner juks — perfekt for streng teknikk.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'roing-maskin',
@@ -513,7 +483,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert frem til strake armer.',
     ],
     tips: ['Test ulike grep — de treffer ryggen litt forskjellig.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'omvendt-roing',
@@ -529,7 +498,6 @@ export const EXERCISES: Exercise[] = [
       'Senk deg kontrollert tilbake til strake armer.',
     ],
     tips: ['Jo mer horisontal kroppen er, desto tyngre blir øvelsen.'],
-    mediaEmoji: '🤸',
   },
   {
     id: 'strak-arm-nedtrekk',
@@ -545,7 +513,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp til strekk i lats.',
     ],
     tips: ['Perfekt for å kjenne lats jobbe isolert.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'rack-pull',
@@ -562,7 +529,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til pinnene.',
     ],
     tips: ['Lar deg trene toppen av markløftet med tyngre vekter.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'shrugs-stang',
@@ -578,7 +544,6 @@ export const EXERCISES: Exercise[] = [
       'Hold et øyeblikk og senk kontrollert ned.',
     ],
     tips: ['Ikke rull skuldrene — bevegelsen går rett opp og ned.'],
-    mediaEmoji: '🤷',
   },
   {
     id: 'shrugs-manualer',
@@ -594,7 +559,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Manualer gir mer naturlig bane enn stang.'],
-    mediaEmoji: '🤷',
   },
   {
     id: 'kettlebell-roing',
@@ -610,7 +574,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Hold hoften i ro — ingen rotasjon.'],
-    mediaEmoji: '🔔',
   },
   {
     id: 'roing-strikk',
@@ -626,7 +589,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert frem igjen.',
     ],
     tips: ['Klem skulderbladene sammen i hvert drag.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'nedtrekk-strikk',
@@ -642,7 +604,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp til strake armer.',
     ],
     tips: ['Fin hjemmevariant av nedtrekk i kabel.'],
-    mediaEmoji: '🪢',
   },
   // ============================================================
   // SKULDRE
@@ -662,7 +623,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til skuldrene.',
     ],
     tips: ['Ikke len deg bakover — hold ribbeina nede.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'push-press',
@@ -679,7 +639,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Beindrivet lar deg presse tyngre enn i strikt press.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'skulderpress-manualer',
@@ -695,7 +654,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til skulderhøyde.',
     ],
     tips: ['Sittende med ryggstøtte gir mer stabilitet og tyngre løft.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'arnold-press',
@@ -712,7 +670,6 @@ export const EXERCISES: Exercise[] = [
       'Reverser bevegelsen på vei ned.',
     ],
     tips: ['Rotasjonen treffer både fremre og midtre skulder.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'skulderpress-maskin',
@@ -728,7 +685,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Fin når du vil presse trygt nær utmattelse.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'skulderpress-strikk',
@@ -744,7 +700,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Bredere fotstilling gir mer motstand.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'kettlebell-press',
@@ -760,7 +715,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til rack.',
     ],
     tips: ['Stram magen for å unngå å lene deg til siden.'],
-    mediaEmoji: '🔔',
   },
   {
     id: 'sidehev',
@@ -776,7 +730,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Lett bøy i albuen og rolig tempo — ingen sving.'],
-    mediaEmoji: '🕊️',
   },
   {
     id: 'sidehev-kabel',
@@ -792,7 +745,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Kabelen gir jevn motstand gjennom hele bevegelsen.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'sidehev-strikk',
@@ -808,7 +760,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Hold skuldrene senket — ikke trekk dem mot ørene.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'fronthev-manualer',
@@ -824,7 +775,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Unngå å svinge med overkroppen.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'fronthev-skive',
@@ -840,7 +790,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Stram magen og stå helt i ro.'],
-    mediaEmoji: '🥏',
   },
   {
     id: 'omvendt-flyes-manualer',
@@ -857,7 +806,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Lette vekter og streng teknikk treffer bakre skulder best.'],
-    mediaEmoji: '🦅',
   },
   {
     id: 'omvendt-flyes-maskin',
@@ -873,7 +821,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Hold albuene i samme høyde som skuldrene.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'face-pull',
@@ -889,7 +836,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert frem igjen.',
     ],
     tips: ['Gull for skulderhelse — sikt albuene høyt og bakover.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'staaende-roing-stang',
@@ -905,7 +851,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Stopp ved brystet hvis skuldrene sier ifra — bredere grep er ofte snillere.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'pike-pushups',
@@ -921,7 +866,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen til start.',
     ],
     tips: ['Sett føttene på en kasse for å gjøre den tyngre.'],
-    mediaEmoji: '🤸',
   },
   {
     id: 'handstand-pushups',
@@ -937,7 +881,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen til strake armer.',
     ],
     tips: ['Mestre pike pushups før du prøver denne.'],
-    mediaEmoji: '🤸',
   },
   {
     id: 'landmine-press',
@@ -954,7 +897,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Skånsom pressebane for skuldre som ikke liker press rett opp.'],
-    mediaEmoji: '💣',
   },
   // ============================================================
   // BICEPS
@@ -973,7 +915,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til strake armer.',
     ],
     tips: ['Hold albuene inntil kroppen — ingen sving med hoften.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'ez-curl',
@@ -989,7 +930,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Vinkelgrepet er snillere mot håndleddene enn rett stang.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'bicepscurl-manualer',
@@ -1005,7 +945,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til strake armer.',
     ],
     tips: ['Kjør gjerne annenhver arm for bedre kontroll.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'hammercurl',
@@ -1021,7 +960,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Det nøytrale grepet gir ekstra jobb for underarmene.'],
-    mediaEmoji: '🔨',
   },
   {
     id: 'skra-curl-manualer',
@@ -1037,7 +975,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert til full strekk.',
     ],
     tips: ['Strekket i bunnposisjonen gjør denne ekstra effektiv.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'konsentrasjonscurl',
@@ -1053,7 +990,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Null sving — ren isolasjon av biceps.'],
-    mediaEmoji: '🧠',
   },
   {
     id: 'preachercurl',
@@ -1069,7 +1005,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert nesten helt ned.',
     ],
     tips: ['Ikke slipp helt ned med tunge vekter — skån albuene.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'spider-curl',
@@ -1085,7 +1020,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert til strake armer.',
     ],
     tips: ['Konstant spenning — ingen hvile i bunnen.'],
-    mediaEmoji: '🕷️',
   },
   {
     id: 'bicepscurl-kabel',
@@ -1101,7 +1035,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Kabelen holder spenning selv i bunnen av bevegelsen.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'bicepscurl-maskin',
@@ -1117,7 +1050,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Fin som avslutter når armene er slitne.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'bicepscurl-strikk',
@@ -1133,7 +1065,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Motstanden øker mot toppen — klem ekstra hardt der.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'zottman-curl',
@@ -1149,7 +1080,6 @@ export const EXERCISES: Exercise[] = [
       'Senk med overhåndsgrep og roter tilbake i bunnen.',
     ],
     tips: ['Trener biceps på vei opp og underarmer på vei ned.'],
-    mediaEmoji: '🔄',
   },
   // ============================================================
   // TRICEPS
@@ -1168,7 +1098,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp til albuene er i 90 grader.',
     ],
     tips: ['Albuene skal stå stille — bare underarmene beveger seg.'],
-    mediaEmoji: '⬇️',
   },
   {
     id: 'triceps-pushdown-tau',
@@ -1184,7 +1113,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp igjen.',
     ],
     tips: ['Å spre tauet i bunnen gir ekstra sammentrekning.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'fransk-press',
@@ -1200,7 +1128,6 @@ export const EXERCISES: Exercise[] = [
       'Strekk armene tilbake til start.',
     ],
     tips: ['Hold overarmene i ro og loddrett gjennom hele settet.'],
-    mediaEmoji: '💀',
   },
   {
     id: 'triceps-extension-manual',
@@ -1216,7 +1143,6 @@ export const EXERCISES: Exercise[] = [
       'Strekk armene tilbake til start.',
     ],
     tips: ['Hold albuene pekende frem, ikke ut til siden.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'triceps-extension-kabel',
@@ -1232,7 +1158,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Utgangsposisjonen med strekk treffer den lange tricepshodet godt.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'smal-benkpress',
@@ -1248,7 +1173,6 @@ export const EXERCISES: Exercise[] = [
       'Press stangen opp til strake armer.',
     ],
     tips: ['Ikke gå smalere enn skulderbredde — det belaster håndleddene.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'kickbacks-manualer',
@@ -1264,7 +1188,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake til 90 grader.',
     ],
     tips: ['Klem hardt i toppen — lett vekt holder lenge.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'dips-benk',
@@ -1280,7 +1203,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen til strake armer.',
     ],
     tips: ['Legg vekt på fanget for mer motstand.'],
-    mediaEmoji: '🪑',
   },
   {
     id: 'diamant-pushups',
@@ -1296,7 +1218,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen.',
     ],
     tips: ['En av de tyngste pushup-variantene for triceps.'],
-    mediaEmoji: '💎',
   },
   {
     id: 'triceps-extension-maskin',
@@ -1312,7 +1233,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Full kontroll i den eksentriske fasen gir mest igjen.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'triceps-pushdown-strikk',
@@ -1328,7 +1248,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp igjen.',
     ],
     tips: ['Perfekt som oppvarming for albuene før pressøvelser.'],
-    mediaEmoji: '🪢',
   },
   // ============================================================
   // UNDERARMER
@@ -1347,7 +1266,6 @@ export const EXERCISES: Exercise[] = [
       'Curl håndleddene opp så høyt du kan.',
     ],
     tips: ['Bruk lett vekt og høye repetisjoner.'],
-    mediaEmoji: '✊',
   },
   {
     id: 'omvendt-haandleddscurl',
@@ -1363,7 +1281,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Balanserer treningen på oversiden av underarmen.'],
-    mediaEmoji: '✊',
   },
   {
     id: 'haandleddscurl-manualer',
@@ -1379,7 +1296,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Én arm om gangen gir bedre kontakt.'],
-    mediaEmoji: '✊',
   },
   {
     id: 'omvendt-curl-stang',
@@ -1395,7 +1311,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Bruk lettere vekt enn i vanlig curl.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'bondegang',
@@ -1411,7 +1326,6 @@ export const EXERCISES: Exercise[] = [
       'Fortsett en gitt distanse eller tid, og sett vektene rolig ned.',
     ],
     tips: ['Korte, raske steg og blikket frem.'],
-    mediaEmoji: '🚶',
   },
   {
     id: 'dead-hang',
@@ -1427,7 +1341,6 @@ export const EXERCISES: Exercise[] = [
       'Hold så lenge du klarer med godt grep.',
     ],
     tips: ['Bygger grepsstyrke og strekker ut skuldrene samtidig.'],
-    mediaEmoji: '🐒',
   },
   {
     id: 'haandgriper',
@@ -1443,7 +1356,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp igjen.',
     ],
     tips: ['Tren begge hender likt.'],
-    mediaEmoji: '🤏',
   },
   // ============================================================
   // MAGE OG KJERNE
@@ -1462,7 +1374,6 @@ export const EXERCISES: Exercise[] = [
       'Hold posisjonen med rolig pust.',
     ],
     tips: ['Ikke la hoften synke eller peke i været.'],
-    mediaEmoji: '🧱',
   },
   {
     id: 'sideplanke',
@@ -1478,7 +1389,6 @@ export const EXERCISES: Exercise[] = [
       'Hold posisjonen, og bytt side.',
     ],
     tips: ['Skyv gulvet vekk med underarmen for stabil skulder.'],
-    mediaEmoji: '🧱',
   },
   {
     id: 'situps',
@@ -1494,7 +1404,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Ikke dra i nakken — hendene lett ved tinningene.'],
-    mediaEmoji: '🔥',
   },
   {
     id: 'crunches',
@@ -1510,7 +1419,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Kort bevegelse — tenk å presse korsryggen ned i gulvet.'],
-    mediaEmoji: '🔥',
   },
   {
     id: 'crunch-maskin',
@@ -1526,7 +1434,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Maskinen lar deg progressivt øke belastningen på magen.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'kabelcrunch',
@@ -1542,7 +1449,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert opp igjen.',
     ],
     tips: ['Hoften skal stå stille — bevegelsen skjer i ryggsøylen.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'hengende-beinhev',
@@ -1558,7 +1464,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert uten å pendle.',
     ],
     tips: ['Tilt bekkenet bakover på toppen for full mageaktivering.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'hengende-knehev',
@@ -1574,7 +1479,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Lettere variant av hengende beinhev — samme kontroll gjelder.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'liggende-beinhev',
@@ -1590,7 +1494,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert uten at korsryggen letter fra gulvet.',
     ],
     tips: ['Bøy knærne litt hvis korsryggen svaier.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'russisk-vri',
@@ -1606,7 +1509,6 @@ export const EXERCISES: Exercise[] = [
       'Hold ryggen lang og brystet frem.',
     ],
     tips: ['Hold en vektskive eller manual for mer motstand.'],
-    mediaEmoji: '🌀',
   },
   {
     id: 'magehjul',
@@ -1622,7 +1524,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk deg tilbake til start.',
     ],
     tips: ['Ikke la korsryggen svaie — gå heller kortere.'],
-    mediaEmoji: '🛞',
   },
   {
     id: 'dead-bug',
@@ -1638,7 +1539,6 @@ export const EXERCISES: Exercise[] = [
       'Tilbake til start og bytt side.',
     ],
     tips: ['Press korsryggen ned i gulvet gjennom hele øvelsen.'],
-    mediaEmoji: '🪲',
   },
   {
     id: 'hollow-hold',
@@ -1654,7 +1554,6 @@ export const EXERCISES: Exercise[] = [
       'Hold posisjonen med korsryggen presset i gulvet.',
     ],
     tips: ['Bøy knærne eller hold armene langs siden for lettere variant.'],
-    mediaEmoji: '🍌',
   },
   {
     id: 'v-ups',
@@ -1670,7 +1569,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Hold beina så strake som mulig.'],
-    mediaEmoji: '✌️',
   },
   {
     id: 'pallof-press',
@@ -1686,7 +1584,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk kontrollert tilbake.',
     ],
     tips: ['Anti-rotasjon — jo lenger armene er ute, jo hardere jobber kjernen.'],
-    mediaEmoji: '🛡️',
   },
   {
     id: 'vedhogger-kabel',
@@ -1702,7 +1599,6 @@ export const EXERCISES: Exercise[] = [
       'Før kontrollert tilbake.',
     ],
     tips: ['Roter fra hoften og la blikket følge hendene.'],
-    mediaEmoji: '🪓',
   },
   {
     id: 'fjellklatrere',
@@ -1718,7 +1614,6 @@ export const EXERCISES: Exercise[] = [
       'Bytt bein i jevn, løpende rytme.',
     ],
     tips: ['Hold hoften lav og skuldrene over hendene.'],
-    mediaEmoji: '⛰️',
   },
   {
     id: 'fuglehund',
@@ -1734,7 +1629,6 @@ export const EXERCISES: Exercise[] = [
       'Hold et par sekunder, og bytt side.',
     ],
     tips: ['Tenk lang nakke og stille hofte — ingen vipping.'],
-    mediaEmoji: '🐕',
   },
   // ============================================================
   // QUADS
@@ -1754,7 +1648,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen gjennom hele foten.',
     ],
     tips: ['Knærne følger tærnes retning.', 'Ta pust og spenn magen før hver rep.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'frontboy',
@@ -1770,7 +1663,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen uten å miste albuene ned.',
     ],
     tips: ['Krever mobilitet i håndledd — kryssgrep er et fint alternativ.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'beinpress',
@@ -1786,7 +1678,6 @@ export const EXERCISES: Exercise[] = [
       'Press tilbake uten å låse knærne helt.',
     ],
     tips: ['Ikke la korsryggen rulle opp fra ryggputen i bunnen.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'hack-squat',
@@ -1802,7 +1693,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen gjennom hele foten.',
     ],
     tips: ['Lav fotplassering gir mer quads.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'smith-kneboy',
@@ -1818,7 +1708,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen og lås stangen når settet er ferdig.',
     ],
     tips: ['Den faste banen lar deg isolere beina mer.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'beinspark',
@@ -1834,7 +1723,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Klem quads hardt i toppen et lite sekund.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'utfall',
@@ -1850,7 +1738,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg tilbake til start og bytt bein.',
     ],
     tips: ['Fremre kne skal peke samme vei som tærne.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'utfall-manualer',
@@ -1866,7 +1753,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg tilbake til start og bytt bein.',
     ],
     tips: ['Kortere steg gir mer quads, lengre steg mer sete.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'utfall-stang',
@@ -1882,7 +1768,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg tilbake til start og bytt bein.',
     ],
     tips: ['Krever mer balanse enn manualer — start lett.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'gaaende-utfall',
@@ -1898,7 +1783,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp og rett inn i neste steg.',
     ],
     tips: ['Jevn rytme — ikke stopp opp mellom stegene.'],
-    mediaEmoji: '🚶',
   },
   {
     id: 'bulgarske-utfall',
@@ -1914,7 +1798,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen gjennom fremre fot.',
     ],
     tips: ['Beryktet og brutalt effektiv — start med kroppsvekt.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'goblet-squat',
@@ -1930,7 +1813,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen gjennom hele foten.',
     ],
     tips: ['Perfekt for å lære god knebøyteknikk.'],
-    mediaEmoji: '🔔',
   },
   {
     id: 'sumo-kneboy',
@@ -1946,7 +1828,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp igjen med knærne ut.',
     ],
     tips: ['Den brede stillingen treffer innsiden av låret ekstra.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'oppsteg',
@@ -1962,7 +1843,6 @@ export const EXERCISES: Exercise[] = [
       'Steg kontrollert ned igjen og bytt bein.',
     ],
     tips: ['Ikke spark fra med bakerste bein — la fremre bein gjøre jobben.'],
-    mediaEmoji: '🪜',
   },
   {
     id: 'pistolkneboy',
@@ -1978,7 +1858,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp igjen uten støtte.',
     ],
     tips: ['Hold i en TRX eller stolpe mens du bygger styrken.'],
-    mediaEmoji: '🦿',
   },
   {
     id: 'sissy-squat',
@@ -1994,7 +1873,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk deg opp igjen med quads.',
     ],
     tips: ['Ekstrem strekk på quads — varm godt opp først.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'veggsitt',
@@ -2010,7 +1888,6 @@ export const EXERCISES: Exercise[] = [
       'Reis deg når tiden er ute.',
     ],
     tips: ['Hold vekten i hælene og hendene unna lårene.'],
-    mediaEmoji: '🧱',
   },
   {
     id: 'kneboy-strikk',
@@ -2026,7 +1903,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp mot strikkens motstand.',
     ],
     tips: ['Miniband over knærne aktiverer setet ekstra.'],
-    mediaEmoji: '🪢',
   },
   // ============================================================
   // HAMSTRINGS
@@ -2046,7 +1922,6 @@ export const EXERCISES: Exercise[] = [
       'Dra hoften frem igjen til oppreist.',
     ],
     tips: ['Ryggen holdes rett hele veien — bevegelsen skjer i hoften.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'rumensk-markloft-manualer',
@@ -2062,7 +1937,6 @@ export const EXERCISES: Exercise[] = [
       'Dra hoften frem igjen til oppreist.',
     ],
     tips: ['Manualene skal holde seg tett inntil beina.'],
-    mediaEmoji: '💪',
   },
   {
     id: 'enbeins-rumensk-markloft',
@@ -2078,7 +1952,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk deg opp igjen til oppreist.',
     ],
     tips: ['Utfordrer balansen — fest blikket på et punkt i gulvet.'],
-    mediaEmoji: '🦩',
   },
   {
     id: 'strak-markloft',
@@ -2094,7 +1967,6 @@ export const EXERCISES: Exercise[] = [
       'Trekk deg opp igjen med hamstrings og sete.',
     ],
     tips: ['Gå bare så dypt som du klarer med rett rygg.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'laarcurl-liggende',
@@ -2110,7 +1982,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Hold hoften nede i benken hele settet.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'laarcurl-sittende',
@@ -2126,7 +1997,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert tilbake.',
     ],
     tips: ['Sittende posisjon gir mer strekk enn liggende.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'nordisk-laarcurl',
@@ -2142,7 +2012,6 @@ export const EXERCISES: Exercise[] = [
       'Ta imot med hendene og press deg tilbake.',
     ],
     tips: ['Ekstremt tung eksentrisk øvelse — få reps holder lenge.'],
-    mediaEmoji: '🧎',
   },
   {
     id: 'god-morgen',
@@ -2158,7 +2027,6 @@ export const EXERCISES: Exercise[] = [
       'Reis deg opp igjen med hoften.',
     ],
     tips: ['Start lett — teknikken må sitte før vekten øker.'],
-    mediaEmoji: '🌅',
   },
   {
     id: 'glute-ham-raise',
@@ -2174,7 +2042,6 @@ export const EXERCISES: Exercise[] = [
       'Curl deg opp igjen med hamstrings.',
     ],
     tips: ['Press deg opp med hendene hvis du ikke klarer full rep.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'laarcurl-ball',
@@ -2190,7 +2057,6 @@ export const EXERCISES: Exercise[] = [
       'Rull kontrollert ut igjen uten å senke hoften.',
     ],
     tips: ['Hold hoften høy hele settet.'],
-    mediaEmoji: '⚽',
   },
   // ============================================================
   // SETEMUSKLER
@@ -2209,7 +2075,6 @@ export const EXERCISES: Exercise[] = [
       'Klem setet hardt på toppen og senk kontrollert.',
     ],
     tips: ['Haken inn og blikket frem — ikke overstrekk korsryggen.', 'Bruk pute på stangen.'],
-    mediaEmoji: '🍑',
   },
   {
     id: 'hip-thrust-maskin',
@@ -2225,7 +2090,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Raskere å laste opp enn frivekt-varianten.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'setebro',
@@ -2241,7 +2105,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Press gjennom hælene for best setekontakt.'],
-    mediaEmoji: '🌉',
   },
   {
     id: 'enbeins-setebro',
@@ -2257,7 +2120,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert og bytt side etter settet.',
     ],
     tips: ['Hold hoften vannrett — ingen vipping til siden.'],
-    mediaEmoji: '🌉',
   },
   {
     id: 'sumo-markloft',
@@ -2274,7 +2136,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Kortere løftebane enn vanlig markløft — hoften jobber mest.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'kettlebell-swing',
@@ -2290,7 +2151,6 @@ export const EXERCISES: Exercise[] = [
       'Driv hoften eksplosivt frem så kettlebellen svinger til brysthøyde.',
     ],
     tips: ['Det er et hoftekast, ikke et skulderløft.'],
-    mediaEmoji: '🔔',
   },
   {
     id: 'setespark-kabel',
@@ -2306,7 +2166,6 @@ export const EXERCISES: Exercise[] = [
       'Før kontrollert tilbake uten å svaie i ryggen.',
     ],
     tips: ['Klem setet i toppen av hvert spark.'],
-    mediaEmoji: '🍑',
   },
   {
     id: 'eselspark',
@@ -2322,7 +2181,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert og gjenta før du bytter side.',
     ],
     tips: ['Hold ryggen stille — bevegelsen skjer i hoften.'],
-    mediaEmoji: '🐴',
   },
   {
     id: 'abduksjon-maskin',
@@ -2338,7 +2196,6 @@ export const EXERCISES: Exercise[] = [
       'Slipp kontrollert sammen igjen.',
     ],
     tips: ['Len deg litt frem for å treffe øvre del av setet mer.'],
-    mediaEmoji: '🦾',
   },
   {
     id: 'sidegange-strikk',
@@ -2354,7 +2211,6 @@ export const EXERCISES: Exercise[] = [
       'Gå like langt i begge retninger.',
     ],
     tips: ['Hold spenning i strikken hele tiden — ingen slappe steg.'],
-    mediaEmoji: '🦀',
   },
   {
     id: 'musling-strikk',
@@ -2370,7 +2226,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Fin aktiveringsøvelse før knebøy og løping.'],
-    mediaEmoji: '🐚',
   },
   // ============================================================
   // LEGGER
@@ -2389,7 +2244,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp på tå så høyt du kan.',
     ],
     tips: ['Kort pause i topp og bunn — ingen sprett.'],
-    mediaEmoji: '🦶',
   },
   {
     id: 'taahev-sittende',
@@ -2405,7 +2259,6 @@ export const EXERCISES: Exercise[] = [
       'Press opp på tå.',
     ],
     tips: ['Bøyd kne treffer den dype soleus-muskelen.'],
-    mediaEmoji: '🦶',
   },
   {
     id: 'taahev-beinpress',
@@ -2421,7 +2274,6 @@ export const EXERCISES: Exercise[] = [
       'Press platen fra deg med tærne.',
     ],
     tips: ['Hold knærne nesten strake, men aldri hardt låst.'],
-    mediaEmoji: '🦶',
   },
   {
     id: 'taahev-manualer',
@@ -2437,7 +2289,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp på tå.',
     ],
     tips: ['Hold i noe med én hånd for balanse om nødvendig.'],
-    mediaEmoji: '🦶',
   },
   {
     id: 'enbeins-taahev',
@@ -2453,7 +2304,6 @@ export const EXERCISES: Exercise[] = [
       'Press deg opp på tå og gjenta før du bytter bein.',
     ],
     tips: ['Rolig tempo og full bevegelsesbane slår tunge, korte reps.'],
-    mediaEmoji: '🦶',
   },
   // ============================================================
   // KORSRYGG
@@ -2472,7 +2322,6 @@ export const EXERCISES: Exercise[] = [
       'Løft deg opp til kroppen er i én rett linje.',
     ],
     tips: ['Hold en vektskive mot brystet for mer motstand.'],
-    mediaEmoji: '🔙',
   },
   {
     id: 'omvendt-rygghev',
@@ -2488,7 +2337,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Skånsom måte å styrke korsryggen på uten aksial belastning.'],
-    mediaEmoji: '🔙',
   },
   {
     id: 'superman',
@@ -2504,7 +2352,6 @@ export const EXERCISES: Exercise[] = [
       'Hold et par sekunder og senk rolig ned.',
     ],
     tips: ['Se ned i gulvet for å holde nakken nøytral.'],
-    mediaEmoji: '🦸',
   },
   // ============================================================
   // HELKROPP
@@ -2524,7 +2371,6 @@ export const EXERCISES: Exercise[] = [
       'Reis deg opp og senk stangen kontrollert.',
     ],
     tips: ['Teknisk krevende — lær bevegelsen med tom stang først.'],
-    mediaEmoji: '⚡',
   },
   {
     id: 'rykk',
@@ -2541,7 +2387,6 @@ export const EXERCISES: Exercise[] = [
       'Reis deg helt opp med kontroll.',
     ],
     tips: ['Den mest tekniske av alle løft — bruk tid med kosteskaft og tom stang.'],
-    mediaEmoji: '🥇',
   },
   {
     id: 'thruster',
@@ -2558,7 +2403,6 @@ export const EXERCISES: Exercise[] = [
       'Senk stangen tilbake til skuldrene.',
     ],
     tips: ['Bruk farten fra beina rett inn i pressen.'],
-    mediaEmoji: '🚀',
   },
   {
     id: 'kettlebell-clean-press',
@@ -2574,7 +2418,6 @@ export const EXERCISES: Exercise[] = [
       'Senk til rack og videre ned til start.',
     ],
     tips: ['La kettlebellen rulle rundt håndleddet — ikke slå den.'],
-    mediaEmoji: '🔔',
   },
   {
     id: 'tyrkisk-oppreisning',
@@ -2590,7 +2433,6 @@ export const EXERCISES: Exercise[] = [
       'Reverser bevegelsen kontrollert ned igjen.',
     ],
     tips: ['Blikket på kettlebellen hele veien opp.'],
-    mediaEmoji: '🧿',
   },
   {
     id: 'markloft-trapbar',
@@ -2607,7 +2449,6 @@ export const EXERCISES: Exercise[] = [
       'Senk kontrollert tilbake.',
     ],
     tips: ['Snillere mot korsryggen enn vanlig markløft — fin for nybegynnere.'],
-    mediaEmoji: '🏋️',
   },
   {
     id: 'medisinball-kast',
@@ -2623,7 +2464,6 @@ export const EXERCISES: Exercise[] = [
       'Plukk opp og gjenta i jevn rytme.',
     ],
     tips: ['Bruk hele kroppen i kastet — ikke bare armene.'],
-    mediaEmoji: '🏐',
   },
   {
     id: 'slede-dytt',
@@ -2639,7 +2479,6 @@ export const EXERCISES: Exercise[] = [
       'Hold ryggen rett og magen stram.',
     ],
     tips: ['Tung slede kort vei bygger styrke, lett slede langt bygger kondis.'],
-    mediaEmoji: '🛷',
   },
   {
     id: 'muscle-ups',
@@ -2656,7 +2495,6 @@ export const EXERCISES: Exercise[] = [
       'Senk deg kontrollert tilbake til heng.',
     ],
     tips: ['Krever solide pullups og dips i bunn først.'],
-    mediaEmoji: '🦍',
   },
   // ============================================================
   // KONDISJON
@@ -2675,7 +2513,6 @@ export const EXERCISES: Exercise[] = [
       'Reverser rekkefølgen på vei frem: armer, kropp, bein.',
     ],
     tips: ['Rekkefølgen er bein–rygg–armer, ikke omvendt.'],
-    mediaEmoji: '🚣',
   },
   {
     id: 'loping-tredemolle',
@@ -2691,7 +2528,6 @@ export const EXERCISES: Exercise[] = [
       'Avslutt med noen minutter rolig nedjogg.',
     ],
     tips: ['1 % stigning etterligner løping utendørs.'],
-    mediaEmoji: '🏃',
   },
   {
     id: 'loping-ute',
@@ -2707,7 +2543,6 @@ export const EXERCISES: Exercise[] = [
       'Avslutt rolig og tøy lett etterpå.',
     ],
     tips: ['Du skal kunne snakke i korte setninger på rolige turer.'],
-    mediaEmoji: '🏃',
   },
   {
     id: 'sprintintervaller',
@@ -2723,7 +2558,6 @@ export const EXERCISES: Exercise[] = [
       'Gå eller jogg rolig til du er klar for neste drag.',
     ],
     tips: ['Kvalitet foran kvantitet — full hvile mellom dragene.'],
-    mediaEmoji: '💨',
   },
   {
     id: 'airbike',
@@ -2739,7 +2573,6 @@ export const EXERCISES: Exercise[] = [
       'Kjør intervaller eller jevnt tempo.',
     ],
     tips: ['Brutalt effektiv til korte, harde intervaller.'],
-    mediaEmoji: '🌪️',
   },
   {
     id: 'ergometersykkel',
@@ -2755,7 +2588,6 @@ export const EXERCISES: Exercise[] = [
       'Hold overkroppen avslappet.',
     ],
     tips: ['Skånsomt for knærne — fin restitusjonsøkt.'],
-    mediaEmoji: '🚴',
   },
   {
     id: 'stakemaskin',
@@ -2771,7 +2603,6 @@ export const EXERCISES: Exercise[] = [
       'La armene gli kontrollert opp igjen.',
     ],
     tips: ['Bøy i hoften og bruk magen — ikke bare armene.'],
-    mediaEmoji: '⛷️',
   },
   {
     id: 'trappemaskin',
@@ -2787,7 +2618,6 @@ export const EXERCISES: Exercise[] = [
       'Hold oppreist holdning uten å henge på armene.',
     ],
     tips: ['Jo mindre du støtter deg, jo mer jobber beina.'],
-    mediaEmoji: '🪜',
   },
   {
     id: 'ellipsemaskin',
@@ -2803,7 +2633,6 @@ export const EXERCISES: Exercise[] = [
       'Juster motstanden etter ønsket intensitet.',
     ],
     tips: ['Lav belastning på leddene — fin på lette dager.'],
-    mediaEmoji: '🎽',
   },
   {
     id: 'hopptau',
@@ -2819,7 +2648,6 @@ export const EXERCISES: Exercise[] = [
       'Finn en jevn rytme og øk varigheten gradvis.',
     ],
     tips: ['Små hopp — tauet trenger bare noen centimeter klaring.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'burpees',
@@ -2835,7 +2663,6 @@ export const EXERCISES: Exercise[] = [
       'Avslutt med et strekk-hopp med hendene over hodet.',
     ],
     tips: ['Finn et tempo du kan holde — ikke sprint de første ti.'],
-    mediaEmoji: '🔥',
   },
   {
     id: 'jumping-jacks',
@@ -2851,7 +2678,6 @@ export const EXERCISES: Exercise[] = [
       'Hopp tilbake til start i jevn rytme.',
     ],
     tips: ['Fin puls-hever i oppvarmingen.'],
-    mediaEmoji: '⭐',
   },
   {
     id: 'motbakkegange',
@@ -2867,7 +2693,6 @@ export const EXERCISES: Exercise[] = [
       'Hold i 20–40 minutter.',
     ],
     tips: ['Lav belastning, høy effekt — undervurdert kondisjonsøkt.'],
-    mediaEmoji: '⛰️',
   },
   {
     id: 'svomming',
@@ -2883,7 +2708,6 @@ export const EXERCISES: Exercise[] = [
       'Avslutt med rolige lengder som nedtrapping.',
     ],
     tips: ['Helt leddvennlig — perfekt ved småskader.'],
-    mediaEmoji: '🏊',
   },
   {
     id: 'wall-balls',
@@ -2900,7 +2724,6 @@ export const EXERCISES: Exercise[] = [
       'Ta imot ballen og gå rett i neste rep.',
     ],
     tips: ['Ta imot ballen mykt og la den følge deg ned i knebøyen.'],
-    mediaEmoji: '🏐',
   },
   // ============================================================
   // MOBILITET
@@ -2919,7 +2742,6 @@ export const EXERCISES: Exercise[] = [
       'Tilbake til midten og bytt side.',
     ],
     tips: ['Åpner hofter, bryst og rygg i én bevegelse — perfekt oppvarming.'],
-    mediaEmoji: '🌍',
   },
   {
     id: 'nedovervendt-hund',
@@ -2935,7 +2757,6 @@ export const EXERCISES: Exercise[] = [
       'Hold posisjonen med lange, rolige pust.',
     ],
     tips: ['Trå rolig på stedet med beina for ekstra leggstrekk.'],
-    mediaEmoji: '🐕',
   },
   {
     id: 'barnets-stilling',
@@ -2951,7 +2772,6 @@ export const EXERCISES: Exercise[] = [
       'Pust rolig og la ryggen slippe ned.',
     ],
     tips: ['Fin hvileposisjon mellom tunge sett.'],
-    mediaEmoji: '🧘',
   },
   {
     id: 'katt-ku',
@@ -2967,7 +2787,6 @@ export const EXERCISES: Exercise[] = [
       'Svai ryggen ned og løft blikket mens du puster inn.',
     ],
     tips: ['La pusten styre tempoet.'],
-    mediaEmoji: '🐱',
   },
   {
     id: 'kobra',
@@ -2983,7 +2802,6 @@ export const EXERCISES: Exercise[] = [
       'Hold med åpent bryst og rolige pust.',
     ],
     tips: ['Gå bare så høyt som korsryggen er komfortabel med.'],
-    mediaEmoji: '🐍',
   },
   {
     id: 'duestilling',
@@ -2999,7 +2817,6 @@ export const EXERCISES: Exercise[] = [
       'Len deg eventuelt frem for dypere strekk, og bytt side.',
     ],
     tips: ['En av de beste tøyningene for stramt sete.'],
-    mediaEmoji: '🕊️',
   },
   {
     id: 'hofteboyer-toyning',
@@ -3015,7 +2832,6 @@ export const EXERCISES: Exercise[] = [
       'Hold strekket på fremsiden av hoften, og bytt side.',
     ],
     tips: ['Grip bakerste ankel for å inkludere quads i strekket.'],
-    mediaEmoji: '🧎',
   },
   {
     id: 'hamstrings-toyning',
@@ -3031,7 +2847,6 @@ export const EXERCISES: Exercise[] = [
       'Hold strekket bak på låret, og bytt side.',
     ],
     tips: ['Bøy fra hoften, ikke krum ryggen.'],
-    mediaEmoji: '🦵',
   },
   {
     id: 'brysttoyning-dorkarm',
@@ -3047,7 +2862,6 @@ export const EXERCISES: Exercise[] = [
       'Hold, og bytt side.',
     ],
     tips: ['Varier albuehøyden for å treffe ulike deler av brystet.'],
-    mediaEmoji: '🚪',
   },
   {
     id: 'skulderrotasjon-strikk',
@@ -3063,7 +2877,6 @@ export const EXERCISES: Exercise[] = [
       'Før den samme veien tilbake.',
     ],
     tips: ['Bredere grep gjør bevegelsen lettere.'],
-    mediaEmoji: '🪢',
   },
   {
     id: 'thorakal-rotasjon',
@@ -3079,7 +2892,6 @@ export const EXERCISES: Exercise[] = [
       'Roter så albuen opp mot taket og følg med blikket.',
     ],
     tips: ['Rotasjonen skal komme fra brystryggen, ikke korsryggen.'],
-    mediaEmoji: '🌀',
   },
   {
     id: 'ankelmobilisering',
@@ -3095,7 +2907,6 @@ export const EXERCISES: Exercise[] = [
       'Gjenta rolig, og bytt side.',
     ],
     tips: ['God ankelmobilitet er nøkkelen til dyp knebøy.'],
-    mediaEmoji: '🦶',
   },
   {
     id: 'nitti-nitti',
@@ -3111,7 +2922,6 @@ export const EXERCISES: Exercise[] = [
       'Hold, og bytt side.',
     ],
     tips: ['Løft deg opp fra hoften i stedet for å synke sammen.'],
-    mediaEmoji: '🧘',
   },
   {
     id: 'skumrulling',
@@ -3127,7 +2937,6 @@ export const EXERCISES: Exercise[] = [
       'Stopp og pust rolig på ømme punkter.',
     ],
     tips: ['Unngå å rulle direkte på ledd og korsrygg.'],
-    mediaEmoji: '🧻',
   },
   {
     id: 'leggtoyning-vegg',
@@ -3143,7 +2952,6 @@ export const EXERCISES: Exercise[] = [
       'Hold strekket i leggen, og bytt side.',
     ],
     tips: ['Bøy kneet lett for å nå den dype leggmuskelen.'],
-    mediaEmoji: '🧱',
   },
 ];
 

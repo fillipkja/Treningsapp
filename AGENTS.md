@@ -6,8 +6,9 @@ Lokal-først treningslogg for web, iOS og Android. **Ingen backend, ingen fiktiv
 
 ## Regler
 
-- All brukersynlig tekst på **norsk (bokmål)**. Kodeidentifikatorer på engelsk.
-- **Aldri hardkod farger** — alt via `useTheme()` fra `@/theme` (mørk er standard). Grafserier/heatmap: `chartSeries`/`heatmapRamp` fra `@/theme`.
+- **ALDRI emojier** — ikke i UI, data, varsler eller tekster. Bruk Ionicons + fargetokens. (Eksplisitt brukerkrav.)
+- **All brukersynlig tekst via i18n**: `useT()`/`t()` fra `@/i18n`, nøkler i riktig domenefil i `src/i18n/domains/` (både nb og en — en er typet mot nb, tsc håndhever synk). Aldri hardkodede strenger i JSX. Verdietiketter via `@/i18n/labels`; øvelsesnavn via `exerciseDisplayName` fra `@/lib/data/exercise-i18n`.
+- **Aldri hardkod farger** — alt via `useTheme()` fra `@/theme` (mørk er standard). Identitetsfarger: `muscleColors`/`tierColors`; gradienter kun på hero-elementer; grafserier/heatmap: `chartSeries`/`heatmapRamp`.
 - Path-alias `@/*` → `./src/*`.
 - Native header er av (`headerShown: false`) — skjermer bruker `<Screen>` + `<ScreenHeader>` fra `@/components/ui`.
 - Tilstand: zustand-stores i `src/lib/store/` (persistert med AsyncStorage). Ren logikk (1RM, PR, poeng, streaks, badges) hører hjemme i `src/lib/logic/` som rene funksjoner.

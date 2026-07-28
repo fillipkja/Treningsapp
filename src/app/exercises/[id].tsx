@@ -3,11 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import {
-  CATEGORY_LABELS,
-  EQUIPMENT_LABELS,
-  MUSCLE_LABELS,
-} from '@/components/exercises/exercise-picker-sheet';
+import { MuscleChip } from '@/components/exercises/exercise-picker-sheet';
+import { ExerciseTile } from '@/components/exercises/exercise-tile';
 import { LineChart, StatTile } from '@/components/charts';
 import {
   AppText,
@@ -19,6 +16,9 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { categoryLabel, equipmentLabel } from '@/i18n/labels';
+import { exerciseDisplayName, getExerciseText } from '@/lib/data/exercise-i18n';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatKg, formatNumber, formatRelativeDate, formatShortDate } from '@/lib/format';
 import { firstParam } from '@/lib/params';
@@ -37,6 +37,8 @@ export default function ExerciseDetailScreen() {
   const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
 
   const exercise = useExercise(id ?? '');
   const exercisesLoaded = useExerciseStore((s) => s.loaded);
@@ -61,7 +63,7 @@ export default function ExerciseDetailScreen() {
     if (!exercisesLoaded) {
       return (
         <Screen>
-          <ScreenHeader title="Øvelse" />
+          <ScreenHeader title={t('exercises.screenTitle')} />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={colors.accent} />
           </View>
@@ -70,21 +72,26 @@ export default function ExerciseDetailScreen() {
     }
     return (
       <Screen>
-        <ScreenHeader title="Øvelse" />
+        <ScreenHeader title={t('exercises.screenTitle')} />
         <EmptyState
           icon="barbell-outline"
-          title="Fant ikke øvelsen"
-          message="Øvelsen kan være slettet."
+          title={t('exercises.notFoundTitle')}
+          message={t('exercises.notFoundMessage')}
         />
       </Screen>
     );
   }
 
+  const text = getExerciseText(exercise, lang);
+  const displayName = exerciseDisplayName(exercise, lang);
+  // Navn på det andre språket som undertittel (når det finnes og er ulikt)
+  const altName = lang === 'en' && exercise.englishName ? exercise.name : exercise.englishName;
+
   const confirmDelete = () => {
     confirmDialog({
-      title: 'Slett øvelse',
-      message: `Er du sikker på at du vil slette «${exercise.name}»?`,
-      confirmLabel: 'Slett',
+      title: t('exercises.deleteTitle'),
+      message: t('exercises.deleteMessage', { name: displayName }),
+      confirmLabel: t('common.delete'),
       destructive: true,
       onConfirm: async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -95,8 +102,8 @@ export default function ExerciseDetailScreen() {
         } catch (error) {
           setDeleting(false);
           infoDialog(
-            'Kunne ikke slette øvelsen',
-            error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+            t('exercises.deleteErrorTitle'),
+            error instanceof Error && error.message ? error.message : t('error.generic'),
           );
         }
       },
@@ -110,60 +117,49 @@ export default function ExerciseDetailScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Øvelse" />
+      <ScreenHeader title={t('exercises.screenTitle')} />
 
-      {/* Topp: emoji-plakat, navn og nøkkelchips */}
+      {/* Topp: farget øvelsesflis, navn og nøkkelchips */}
       <Animated.View entering={FadeInDown.duration(250)} style={[styles.center, { gap: spacing.md }]}>
-        <View
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: radius.xl,
-            backgroundColor: colors.surfaceElevated,
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <AppText style={{ fontSize: 52, lineHeight: 62 }}>{exercise.mediaEmoji}</AppText>
-        </View>
+        <ExerciseTile exercise={exercise} size={96} />
         <View style={[styles.center, { gap: spacing.xs }]}>
           <AppText variant="title" style={{ textAlign: 'center' }}>
-            {exercise.name}
+            {displayName}
           </AppText>
-          {exercise.englishName ? (
+          {altName && altName !== displayName ? (
             <AppText variant="body" color="muted">
-              {exercise.englishName}
+              {altName}
             </AppText>
           ) : null}
         </View>
         <View style={[styles.chipRow, { gap: spacing.sm }]}>
-          <Chip label={EQUIPMENT_LABELS[exercise.equipment]} icon="barbell-outline" />
-          <Chip label={CATEGORY_LABELS[exercise.category]} icon="flash-outline" />
-          {exercise.isCustom ? <Chip label="Egen øvelse" icon="person-outline" /> : null}
+          <Chip label={equipmentLabel(exercise.equipment, lang)} icon="barbell-outline" />
+          <Chip label={categoryLabel(exercise.category, lang)} icon="flash-outline" />
+          {exercise.isCustom ? (
+            <Chip label={t('exercises.customChip')} icon="person-outline" />
+          ) : null}
         </View>
       </Animated.View>
 
-      {/* Muskler */}
+      {/* Muskler: primær = fylt muskelfarge, sekundær = nøytral */}
       <Animated.View entering={FadeInDown.duration(250).delay(50)} style={{ marginTop: spacing.xl, gap: spacing.sm }}>
-        <AppText variant="heading">Muskler</AppText>
+        <AppText variant="heading">{t('exercises.muscles')}</AppText>
         <View style={[styles.chipRow, { gap: spacing.sm, justifyContent: 'flex-start' }]}>
           {exercise.primaryMuscles.map((m) => (
-            <Chip key={`p-${m}`} label={MUSCLE_LABELS[m]} selected />
+            <MuscleChip key={`p-${m}`} muscle={m} selected />
           ))}
           {exercise.secondaryMuscles.map((m) => (
-            <Chip key={`s-${m}`} label={MUSCLE_LABELS[m]} />
+            <MuscleChip key={`s-${m}`} muscle={m} />
           ))}
         </View>
       </Animated.View>
 
       {/* Slik gjør du */}
-      {exercise.instructions.length > 0 ? (
+      {text.instructions.length > 0 ? (
         <Animated.View entering={FadeInDown.duration(250).delay(100)} style={{ marginTop: spacing.xl, gap: spacing.sm }}>
-          <AppText variant="heading">Slik gjør du</AppText>
+          <AppText variant="heading">{t('exercises.howTo')}</AppText>
           <Card style={{ gap: spacing.md }}>
-            {exercise.instructions.map((step, index) => (
+            {text.instructions.map((step, index) => (
               <View key={index} style={[styles.stepRow, { gap: spacing.md }]}>
                 <View
                   style={{
@@ -189,11 +185,11 @@ export default function ExerciseDetailScreen() {
       ) : null}
 
       {/* Tips */}
-      {exercise.tips && exercise.tips.length > 0 ? (
+      {text.tips && text.tips.length > 0 ? (
         <Animated.View entering={FadeInDown.duration(250).delay(150)} style={{ marginTop: spacing.xl, gap: spacing.sm }}>
-          <AppText variant="heading">Tips</AppText>
+          <AppText variant="heading">{t('exercises.tips')}</AppText>
           <Card style={{ gap: spacing.sm }}>
-            {exercise.tips.map((tip, index) => (
+            {text.tips.map((tip, index) => (
               <View key={index} style={[styles.stepRow, { gap: spacing.sm }]}>
                 <AppText variant="body" color="accent">
                   •
@@ -210,25 +206,25 @@ export default function ExerciseDetailScreen() {
       {/* Min utvikling */}
       {pr ? (
         <Animated.View entering={FadeInDown.duration(250).delay(200)} style={{ marginTop: spacing.xl, gap: spacing.sm }}>
-          <AppText variant="heading">Min utvikling</AppText>
+          <AppText variant="heading">{t('exercises.myProgress')}</AppText>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <StatTile label="Beste vekt" value={formatKg(pr.bestWeightKg)} />
+              <StatTile label={t('exercises.bestWeight')} value={formatKg(pr.bestWeightKg)} />
             </View>
             <View style={{ flex: 1 }}>
-              <StatTile label="Est. 1RM" value={formatKg(pr.bestEst1RM)} />
+              <StatTile label={t('exercises.est1RM')} value={formatKg(pr.bestEst1RM)} />
             </View>
             <View style={{ flex: 1 }}>
-              <StatTile label="Beste reps" value={formatNumber(pr.bestReps)} />
+              <StatTile label={t('exercises.bestReps')} value={formatNumber(pr.bestReps)} />
             </View>
           </View>
           {chartPoints.length >= 2 ? (
             <Card>
               <AppText variant="label" color="muted" style={{ marginBottom: spacing.sm }}>
-                Est. 1RM over tid (kg)
+                {t('exercises.est1RMOverTime')}
               </AppText>
               <LineChart
-                series={[{ label: 'Est. 1RM', points: chartPoints }]}
+                series={[{ label: t('exercises.est1RM'), points: chartPoints }]}
                 height={180}
                 yFormatter={(v) => formatNumber(v)}
               />
@@ -239,10 +235,10 @@ export default function ExerciseDetailScreen() {
 
       {/* Historikk */}
       <Animated.View entering={FadeInDown.duration(250).delay(250)} style={{ marginTop: spacing.xl, gap: spacing.sm }}>
-        <AppText variant="heading">Historikk</AppText>
+        <AppText variant="heading">{t('exercises.history')}</AppText>
         {history.length === 0 ? (
           <AppText variant="body" color="muted">
-            Ingen økter med denne øvelsen ennå.
+            {t('exercises.noHistory')}
           </AppText>
         ) : (
           <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
@@ -264,7 +260,7 @@ export default function ExerciseDetailScreen() {
                     </AppText>
                   ) : (
                     <AppText variant="caption" color="muted">
-                      Ingen sett
+                      {t('exercises.noSets')}
                     </AppText>
                   )}
                 </View>
@@ -278,7 +274,7 @@ export default function ExerciseDetailScreen() {
       {exercise.isCustom ? (
         <View style={{ marginTop: spacing.xl }}>
           <Button
-            title="Slett øvelse"
+            title={t('exercises.deleteTitle')}
             icon="trash-outline"
             variant="danger"
             fullWidth

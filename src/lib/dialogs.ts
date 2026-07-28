@@ -1,4 +1,5 @@
 import { Alert, Platform } from 'react-native';
+import { t } from '@/i18n';
 
 /**
  * Kryssplattform-bekreftelse. React Native Web implementerer ikke Alert.alert,
@@ -19,7 +20,7 @@ export function confirmDialog(options: {
     return;
   }
   Alert.alert(title, message, [
-    { text: 'Avbryt', style: 'cancel' },
+    { text: t('common.cancel'), style: 'cancel' },
     { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
   ]);
 }

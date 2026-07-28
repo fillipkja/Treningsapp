@@ -13,6 +13,7 @@ import {
   ScreenHeader,
   SegmentedControl,
 } from '@/components/ui';
+import { useT, type AppLanguage } from '@/i18n';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { useAuthStore } from '@/lib/store/auth';
 import { useSettingsStore, type ThemeMode } from '@/lib/store/settings';
@@ -29,10 +30,13 @@ function SectionLabel({ children }: { children: string }) {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const t = useT();
   const { colors, spacing } = useTheme();
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
+  const language = useSettingsStore((s) => s.language);
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
 
   const session = useAuthStore((s) => s.session);
   const shareWorkouts = useAuthStore((s) => s.user?.shareWorkouts ?? true);
@@ -49,15 +53,15 @@ export default function SettingsScreen() {
     setPendingShare(value);
     const result = await updateProfile({ shareWorkouts: value });
     setPendingShare(null);
-    if (result.error) infoDialog('Kunne ikke lagre', result.error);
+    if (result.error) infoDialog(t('profile.saveFailed'), result.error);
   };
 
   const confirmSignOut = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     confirmDialog({
-      title: 'Logg ut',
-      message: 'Er du sikker på at du vil logge ut?',
-      confirmLabel: 'Logg ut',
+      title: t('profile.signOut'),
+      message: t('profile.signOutConfirm'),
+      confirmLabel: t('profile.signOut'),
       destructive: true,
       onConfirm: async () => {
         await signOut();
@@ -68,15 +72,37 @@ export default function SettingsScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Innstillinger" />
+      <ScreenHeader title={t('profile.settingsTitle')} />
 
       <Animated.View entering={FadeInDown.duration(300)}>
-        <SectionLabel>Deling</SectionLabel>
+        <SectionLabel>{t('profile.settingsLanguage')}</SectionLabel>
+        <Card style={{ gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Ionicons name="language-outline" size={19} color={colors.accent} />
+            {/* «Norsk» og «English» er egennavn — vises likt på begge språk */}
+            <AppText variant="bodyBold">{t('profile.settingsLanguage')}</AppText>
+          </View>
+          <SegmentedControl
+            options={[
+              { label: 'Norsk', value: 'nb' },
+              { label: 'English', value: 'en' },
+            ]}
+            value={language}
+            onChange={(v) => {
+              Haptics.selectionAsync();
+              setLanguage(v as AppLanguage);
+            }}
+          />
+        </Card>
+      </Animated.View>
+
+      <Animated.View entering={FadeInDown.delay(60).duration(300)}>
+        <SectionLabel>{t('profile.settingsSharing')}</SectionLabel>
         <Card padded={false}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <ListItem
-              title="Del nye økter med venner"
-              subtitle="Venner ser delte økter i feeden sin"
+              title={t('profile.shareWorkoutsTitle')}
+              subtitle={t('profile.shareWorkoutsSubtitle')}
               icon="share-social-outline"
               right={
                 <Switch
@@ -90,18 +116,18 @@ export default function SettingsScreen() {
         </Card>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(60).duration(300)}>
-        <SectionLabel>Utseende</SectionLabel>
+      <Animated.View entering={FadeInDown.delay(120).duration(300)}>
+        <SectionLabel>{t('profile.settingsAppearance')}</SectionLabel>
         <Card style={{ gap: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Ionicons name="moon-outline" size={19} color={colors.accent} />
-            <AppText variant="bodyBold">Tema</AppText>
+            <AppText variant="bodyBold">{t('profile.theme')}</AppText>
           </View>
           <SegmentedControl
             options={[
-              { label: 'Mørk', value: 'dark' },
-              { label: 'Lys', value: 'light' },
-              { label: 'System', value: 'system' },
+              { label: t('profile.themeDark'), value: 'dark' },
+              { label: t('profile.themeLight'), value: 'light' },
+              { label: t('profile.themeSystem'), value: 'system' },
             ]}
             value={themeMode}
             onChange={(v) => {
@@ -112,26 +138,26 @@ export default function SettingsScreen() {
         </Card>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(120).duration(300)}>
-        <SectionLabel>Konto</SectionLabel>
+      <Animated.View entering={FadeInDown.delay(180).duration(300)}>
+        <SectionLabel>{t('profile.settingsAccount')}</SectionLabel>
         <Card padded={false}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <ListItem
-              title="E-post"
+              title={t('profile.email')}
               subtitle={session?.user.email ?? '—'}
               icon="mail-outline"
             />
             <Divider />
-            <ListItem title="Logg ut" icon="log-out-outline" destructive onPress={confirmSignOut} />
+            <ListItem title={t('profile.signOut')} icon="log-out-outline" destructive onPress={confirmSignOut} />
           </View>
         </Card>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(180).duration(300)}>
-        <SectionLabel>Om</SectionLabel>
+      <Animated.View entering={FadeInDown.delay(240).duration(300)}>
+        <SectionLabel>{t('profile.settingsAbout')}</SectionLabel>
         <Card padded={false}>
           <View style={{ paddingHorizontal: spacing.md }}>
-            <ListItem title="Versjon" subtitle="1.0.0" icon="information-circle-outline" />
+            <ListItem title={t('profile.version')} subtitle="1.0.0" icon="information-circle-outline" />
           </View>
         </Card>
         <AppText
@@ -139,7 +165,7 @@ export default function SettingsScreen() {
           color="muted"
           style={{ textAlign: 'center', marginTop: spacing.xl }}
         >
-          Laget med 💪 i Norge
+          {t('profile.madeInNorway')}
         </AppText>
       </Animated.View>
     </Screen>

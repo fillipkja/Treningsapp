@@ -5,11 +5,12 @@ import { Pressable, SectionList, View } from 'react-native';
 import {
   ExerciseRow,
   filterExercises,
-  MUSCLE_GROUPS,
-  MUSCLE_LABELS,
   MuscleFilterChips,
 } from '@/components/exercises/exercise-picker-sheet';
 import { AppText, Divider, EmptyState, Input, Screen, ScreenHeader } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { ALL_MUSCLES, muscleLabel } from '@/i18n/labels';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { useAllExercises } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
 import type { Exercise, MuscleGroup } from '@/types';
@@ -22,6 +23,8 @@ interface ExerciseSection {
 export default function ExerciseLibraryScreen() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
   const exercises = useAllExercises();
 
   const [query, setQuery] = useState('');
@@ -31,9 +34,9 @@ export default function ExerciseLibraryScreen() {
 
   const sections = useMemo<ExerciseSection[]>(() => {
     if (isFiltering) {
-      return [{ title: null, data: filterExercises(exercises, query, muscle) }];
+      return [{ title: null, data: filterExercises(exercises, query, muscle, lang) }];
     }
-    // Grupper etter første primærmuskel i fast rekkefølge
+    // Grupper etter første primærmuskel i fast rekkefølge; sorter på visningsnavn
     const byMuscle = new Map<MuscleGroup, Exercise[]>();
     for (const e of exercises) {
       const key = e.primaryMuscles[0] ?? 'helkropp';
@@ -41,16 +44,18 @@ export default function ExerciseLibraryScreen() {
       if (list) list.push(e);
       else byMuscle.set(key, [e]);
     }
-    return MUSCLE_GROUPS.filter((m) => byMuscle.has(m)).map((m) => ({
-      title: MUSCLE_LABELS[m],
-      data: byMuscle.get(m) ?? [],
+    return ALL_MUSCLES.filter((m) => byMuscle.has(m)).map((m) => ({
+      title: muscleLabel(m, lang),
+      data: (byMuscle.get(m) ?? []).sort((a, b) =>
+        exerciseDisplayName(a, lang).localeCompare(exerciseDisplayName(b, lang), lang),
+      ),
     }));
-  }, [exercises, isFiltering, query, muscle]);
+  }, [exercises, isFiltering, query, muscle, lang]);
 
   return (
     <Screen>
       <ScreenHeader
-        title="Øvelser"
+        title={t('exercises.title')}
         right={
           <Pressable
             hitSlop={8}
@@ -72,7 +77,7 @@ export default function ExerciseLibraryScreen() {
 
       <View style={{ gap: spacing.sm }}>
         <Input
-          placeholder="Søk etter øvelse …"
+          placeholder={t('exercises.searchPlaceholder')}
           value={query}
           onChangeText={setQuery}
           autoCorrect={false}
@@ -109,8 +114,8 @@ export default function ExerciseLibraryScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="search-outline"
-            title="Ingen treff"
-            message="Prøv et annet søkeord eller fjern filteret."
+            title={t('exercises.noResultsTitle')}
+            message={t('exercises.noResultsMessage')}
           />
         }
       />

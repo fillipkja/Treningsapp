@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
@@ -9,6 +10,7 @@ import { StatTile } from '@/components/charts';
 import { CommentSheet } from '@/components/social/comment-sheet';
 import { WorkoutCard } from '@/components/workout/workout-card';
 import { AppText, Avatar, Button, Card, CountBadge, EmptyState, Screen } from '@/components/ui';
+import { t as tGlobal, useT } from '@/i18n';
 import { fetchFeed, setLike } from '@/lib/api/workouts';
 import { infoDialog } from '@/lib/dialogs';
 import { formatFullDate, formatVolume } from '@/lib/format';
@@ -31,11 +33,12 @@ interface FeedItem {
 const LEGACY_PROMPT_DISMISSED_KEY = 'legacy-prompt-dismissed';
 
 function feilmelding(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.';
+  return error instanceof Error && error.message ? error.message : tGlobal('error.generic');
 }
 
 export default function HomeScreen() {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);
@@ -122,7 +125,7 @@ export default function HomeScreen() {
     applyLikes(liked ? [...before, myId] : before.filter((id) => id !== myId));
     setLike(workoutId, myId, liked).catch((error: unknown) => {
       applyLikes(before);
-      infoDialog('Kunne ikke oppdatere like', feilmelding(error));
+      infoDialog(t('home.likeFailed'), feilmelding(error));
     });
   };
 
@@ -146,15 +149,15 @@ export default function HomeScreen() {
       setShowLegacyPrompt(false);
       await AsyncStorage.setItem(LEGACY_PROMPT_DISMISSED_KEY, '1');
       infoDialog(
-        'Opplasting fullført',
+        t('home.legacyDoneTitle'),
         result.workouts === 1
-          ? '1 økt ble lastet opp til kontoen din.'
-          : `${result.workouts} økter ble lastet opp til kontoen din.`,
+          ? t('home.legacyDoneOne')
+          : t('home.legacyDoneMany', { count: result.workouts }),
       );
       // Hent alt på nytt så de opplastede dataene vises med en gang
       await Promise.all([refreshAll(), loadFeed()]);
     } catch (error) {
-      infoDialog('Opplastingen feilet', feilmelding(error));
+      infoDialog(t('home.legacyFailedTitle'), feilmelding(error));
     } finally {
       setMigrating(false);
     }
@@ -177,7 +180,7 @@ export default function HomeScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
         <View style={{ flex: 1 }}>
           <AppText variant="title" numberOfLines={1}>
-            Hei, {firstName} 👋
+            {t('home.greeting', { name: firstName })}
           </AppText>
           <AppText variant="caption" color="muted" style={{ marginTop: 2 }}>
             {today}
@@ -215,22 +218,22 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Ionicons name="cloud-upload-outline" size={20} color={colors.accent} />
               <AppText variant="bodyBold" style={{ flex: 1 }}>
-                Økter lagret på denne enheten
+                {t('home.legacyTitle')}
               </AppText>
             </View>
             <AppText variant="caption" color="secondary">
-              Du har økter lagret lokalt fra før — vil du laste dem opp til kontoen din?
+              {t('home.legacyMessage')}
             </AppText>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <Button
-                title="Last opp"
+                title={t('home.legacyUpload')}
                 size="sm"
                 icon="cloud-upload-outline"
                 loading={migrating}
                 onPress={() => void uploadLegacy()}
               />
               <Button
-                title="Avvis"
+                title={t('home.legacyDismiss')}
                 size="sm"
                 variant="ghost"
                 disabled={migrating}
@@ -250,25 +253,33 @@ export default function HomeScreen() {
               router.push('/workout/active');
             }}
             style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.md,
-              backgroundColor: colors.accent,
               borderRadius: radius.lg,
-              padding: spacing.lg,
+              overflow: 'hidden',
               opacity: pressed ? 0.9 : 1,
             })}
           >
-            <Ionicons name="play-circle" size={28} color={colors.onAccent} />
-            <View style={{ flex: 1 }}>
-              <AppText variant="bodyBold" color="onAccent">
-                Økt pågår — fortsett
-              </AppText>
-              <AppText variant="caption" color="onAccent" numberOfLines={1} style={{ opacity: 0.85 }}>
-                {active.name || 'Treningsøkt'}
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.onAccent} />
+            <LinearGradient
+              colors={[...colors.gradientAccent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: spacing.lg,
+              }}
+            >
+              <Ionicons name="play-circle" size={28} color={colors.onAccent} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyBold" color="onAccent">
+                  {t('home.activeWorkout')}
+                </AppText>
+                <AppText variant="caption" color="onAccent" numberOfLines={1} style={{ opacity: 0.85 }}>
+                  {active.name || t('home.activeWorkoutFallback')}
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.onAccent} />
+            </LinearGradient>
           </Pressable>
         </Animated.View>
       )}
@@ -276,17 +287,22 @@ export default function HomeScreen() {
       {/* Ukesoversikt */}
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <View style={{ flex: 1 }}>
-          <StatTile label="Økter" value={`${weekStats.count}`} icon="barbell-outline" />
+          <StatTile label={t('common.workouts')} value={`${weekStats.count}`} icon="barbell-outline" />
         </View>
         <View style={{ flex: 1 }}>
-          <StatTile label="Volum" value={formatVolume(weekStats.volumeKg)} icon="trending-up" />
+          <StatTile label={t('common.volume')} value={formatVolume(weekStats.volumeKg)} icon="trending-up" />
         </View>
         <View style={{ flex: 1 }}>
-          <StatTile label="Streak" value={`${weekStats.streak} 🔥`} />
+          <StatTile
+            label={t('common.streak')}
+            value={`${weekStats.streak}`}
+            icon="flame"
+            tint={colors.accentWarm}
+          />
         </View>
       </View>
 
-      <AppText variant="heading">Siste økter</AppText>
+      <AppText variant="heading">{t('home.latestWorkouts')}</AppText>
 
       {/* Feeden feilet, men vi har gamle data å vise */}
       {feedError && feed.length > 0 ? (
@@ -323,7 +339,7 @@ export default function HomeScreen() {
                 {feedError}
               </AppText>
               <Button
-                title="Prøv igjen"
+                title={t('common.retry')}
                 variant="secondary"
                 size="sm"
                 icon="refresh"
@@ -333,9 +349,9 @@ export default function HomeScreen() {
           ) : (
             <EmptyState
               icon="barbell-outline"
-              title="Start din første økt"
-              message="Øktene dine — og venners delte økter — dukker opp her."
-              actionTitle="Start økt"
+              title={t('home.emptyTitle')}
+              message={t('home.emptyMessage')}
+              actionTitle={t('home.emptyAction')}
               onAction={() => router.push('/(tabs)/trening')}
             />
           )

@@ -6,35 +6,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import {
-  CATEGORY_LABELS,
-  EQUIPMENT_LABELS,
-  MUSCLE_GROUPS,
-  MUSCLE_LABELS,
-} from '@/components/exercises/exercise-picker-sheet';
+import { MuscleChip } from '@/components/exercises/exercise-picker-sheet';
 import { AppText, Button, Chip, Input, Screen, ScreenHeader } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import {
+  ALL_CATEGORIES,
+  ALL_EQUIPMENT,
+  ALL_MUSCLES,
+  categoryLabel,
+  equipmentLabel,
+} from '@/i18n/labels';
 import { infoDialog } from '@/lib/dialogs';
 import { useExerciseStore } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
 import type { Equipment, ExerciseCategory, MuscleGroup } from '@/types';
-
-const EMOJIS = ['🏋️', '💪', '🦵', '🍑', '🏃', '🤸', '🧘', '⚡', '🔥', '🎯'];
-const EQUIPMENT_VALUES: Equipment[] = [
-  'stang',
-  'manualer',
-  'maskin',
-  'kabel',
-  'kroppsvekt',
-  'kettlebell',
-  'strikk',
-  'annet',
-];
-const CATEGORY_VALUES: ExerciseCategory[] = ['styrke', 'kondisjon', 'mobilitet'];
 
 /** Dynamisk liste med tekstfelt + fjern-knapp, brukt til steg og tips */
 function DynamicTextList({
@@ -103,12 +92,13 @@ function DynamicTextList({
 
 export default function NewExerciseScreen() {
   const router = useRouter();
-  const { colors, spacing, radius } = useTheme();
+  const { spacing } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
   const addCustomExercise = useExerciseStore((s) => s.addCustomExercise);
 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | undefined>();
-  const [emoji, setEmoji] = useState(EMOJIS[0]);
   const [equipment, setEquipment] = useState<Equipment>('stang');
   const [category, setCategory] = useState<ExerciseCategory>('styrke');
   const [primary, setPrimary] = useState<MuscleGroup[]>([]);
@@ -132,11 +122,11 @@ export default function NewExerciseScreen() {
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError('Gi øvelsen et navn.');
+      setNameError(t('exercises.nameRequired'));
       return;
     }
     if (primary.length === 0) {
-      infoDialog('Mangler muskelgruppe', 'Velg minst én primærmuskel.');
+      infoDialog(t('exercises.missingMuscleTitle'), t('exercises.missingMuscleMessage'));
       return;
     }
     setSaving(true);
@@ -149,18 +139,17 @@ export default function NewExerciseScreen() {
         category,
         instructions: instructions.map((s) => s.trim()).filter((s) => s.length > 0),
         tips: (() => {
-          const cleaned = tips.map((t) => t.trim()).filter((t) => t.length > 0);
+          const cleaned = tips.map((tip) => tip.trim()).filter((tip) => tip.length > 0);
           return cleaned.length > 0 ? cleaned : undefined;
         })(),
-        mediaEmoji: emoji,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
       setSaving(false);
       infoDialog(
-        'Kunne ikke lagre øvelsen',
-        error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.',
+        t('exercises.saveErrorTitle'),
+        error instanceof Error && error.message ? error.message : t('error.generic'),
       );
     }
   };
@@ -171,12 +160,12 @@ export default function NewExerciseScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Screen scroll>
-        <ScreenHeader title="Ny øvelse" />
+        <ScreenHeader title={t('exercises.newTitle')} />
 
         <Animated.View entering={FadeInDown.duration(250)} style={{ gap: spacing.xl }}>
           <Input
-            label="Navn"
-            placeholder="F.eks. Bulgarsk utfall"
+            label={t('exercises.nameLabel')}
+            placeholder={t('exercises.namePlaceholder')}
             value={name}
             maxLength={80}
             onChangeText={(text) => {
@@ -186,54 +175,16 @@ export default function NewExerciseScreen() {
             error={nameError}
           />
 
-          {/* Emoji */}
-          <View style={{ gap: spacing.sm }}>
-            <AppText variant="label" color="muted">
-              Emoji
-            </AppText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: spacing.sm }}
-            >
-              {EMOJIS.map((e) => {
-                const selected = e === emoji;
-                return (
-                  <Pressable
-                    key={e}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setEmoji(e);
-                    }}
-                    style={({ pressed }) => ({
-                      width: 48,
-                      height: 48,
-                      borderRadius: radius.md,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: selected ? colors.accentMuted : colors.surfaceElevated,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.accent : colors.border,
-                      opacity: pressed ? 0.8 : 1,
-                    })}
-                  >
-                    <AppText style={{ fontSize: 24, lineHeight: 30 }}>{e}</AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
           {/* Utstyr */}
           <View style={{ gap: spacing.sm }}>
             <AppText variant="label" color="muted">
-              Utstyr
+              {t('exercises.equipment')}
             </AppText>
             <View style={[styles.wrapRow, { gap: spacing.sm }]}>
-              {EQUIPMENT_VALUES.map((eq) => (
+              {ALL_EQUIPMENT.map((eq) => (
                 <Chip
                   key={eq}
-                  label={EQUIPMENT_LABELS[eq]}
+                  label={equipmentLabel(eq, lang)}
                   selected={equipment === eq}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -247,13 +198,13 @@ export default function NewExerciseScreen() {
           {/* Kategori */}
           <View style={{ gap: spacing.sm }}>
             <AppText variant="label" color="muted">
-              Kategori
+              {t('exercises.category')}
             </AppText>
             <View style={[styles.wrapRow, { gap: spacing.sm }]}>
-              {CATEGORY_VALUES.map((c) => (
+              {ALL_CATEGORIES.map((c) => (
                 <Chip
                   key={c}
-                  label={CATEGORY_LABELS[c]}
+                  label={categoryLabel(c, lang)}
                   selected={category === c}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -267,13 +218,13 @@ export default function NewExerciseScreen() {
           {/* Primærmuskler */}
           <View style={{ gap: spacing.sm }}>
             <AppText variant="label" color="muted">
-              Primærmuskler (minst én)
+              {t('exercises.primaryMuscles')}
             </AppText>
             <View style={[styles.wrapRow, { gap: spacing.sm }]}>
-              {MUSCLE_GROUPS.map((m) => (
-                <Chip
+              {ALL_MUSCLES.map((m) => (
+                <MuscleChip
                   key={m}
-                  label={MUSCLE_LABELS[m]}
+                  muscle={m}
                   selected={primary.includes(m)}
                   onPress={() => togglePrimary(m)}
                 />
@@ -284,13 +235,13 @@ export default function NewExerciseScreen() {
           {/* Sekundærmuskler */}
           <View style={{ gap: spacing.sm }}>
             <AppText variant="label" color="muted">
-              Sekundærmuskler (valgfritt)
+              {t('exercises.secondaryMuscles')}
             </AppText>
             <View style={[styles.wrapRow, { gap: spacing.sm }]}>
-              {MUSCLE_GROUPS.map((m) => (
-                <Chip
+              {ALL_MUSCLES.map((m) => (
+                <MuscleChip
                   key={m}
-                  label={MUSCLE_LABELS[m]}
+                  muscle={m}
                   selected={secondary.includes(m)}
                   onPress={() => toggleSecondary(m)}
                 />
@@ -300,29 +251,29 @@ export default function NewExerciseScreen() {
 
           {/* Instruksjoner */}
           <View style={{ gap: spacing.sm }}>
-            <AppText variant="heading">Slik gjør du</AppText>
+            <AppText variant="heading">{t('exercises.howTo')}</AppText>
             <DynamicTextList
               items={instructions}
               onChange={setInstructions}
-              placeholder="Beskriv steget …"
-              addLabel="Legg til steg"
+              placeholder={t('exercises.stepPlaceholder')}
+              addLabel={t('exercises.addStep')}
               numbered
             />
           </View>
 
           {/* Tips */}
           <View style={{ gap: spacing.sm }}>
-            <AppText variant="heading">Tips (valgfritt)</AppText>
+            <AppText variant="heading">{t('exercises.tipsOptional')}</AppText>
             <DynamicTextList
               items={tips}
               onChange={setTips}
-              placeholder="F.eks. hold ryggen rett …"
-              addLabel="Legg til tips"
+              placeholder={t('exercises.tipPlaceholder')}
+              addLabel={t('exercises.addTip')}
             />
           </View>
 
           <Button
-            title="Lagre øvelse"
+            title={t('exercises.saveExercise')}
             icon="checkmark"
             size="lg"
             fullWidth

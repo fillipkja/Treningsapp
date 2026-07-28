@@ -14,6 +14,8 @@ import {
   Screen,
   ScreenHeader,
 } from '@/components/ui';
+import { useLanguage, useT, type TranslationKey } from '@/i18n';
+import { goalLabel } from '@/i18n/labels';
 import { useAuthStore } from '@/lib/store/auth';
 import { avatarColors, useTheme } from '@/theme';
 import type { TrainingGoal } from '@/types';
@@ -21,18 +23,18 @@ import type { TrainingGoal } from '@/types';
 const STEP_COUNT = 4;
 const USERNAME_RE = /^[a-z0-9._]+$/;
 
-const GOALS: { value: TrainingGoal; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'styrke', label: 'Styrke', icon: 'barbell-outline' },
-  { value: 'muskelvekst', label: 'Muskelvekst', icon: 'body-outline' },
-  { value: 'utholdenhet', label: 'Utholdenhet', icon: 'pulse-outline' },
-  { value: 'helse', label: 'Helse', icon: 'heart-outline' },
+const GOALS: { value: TrainingGoal; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'styrke', icon: 'barbell-outline' },
+  { value: 'muskelvekst', icon: 'body-outline' },
+  { value: 'utholdenhet', icon: 'pulse-outline' },
+  { value: 'helse', icon: 'heart-outline' },
 ];
 
-function validateUsername(username: string): string | undefined {
-  if (!username) return 'Brukernavn er obligatorisk';
-  if (username.length < 3) return 'Brukernavnet må ha minst 3 tegn';
-  if (username.length > 24) return 'Brukernavnet kan ha maks 24 tegn';
-  if (!USERNAME_RE.test(username)) return 'Kun småbokstaver, tall, punktum og understrek';
+function validateUsername(username: string): TranslationKey | undefined {
+  if (!username) return 'auth.usernameRequired';
+  if (username.length < 3) return 'auth.usernameTooShort';
+  if (username.length > 24) return 'auth.usernameTooLong';
+  if (!USERNAME_RE.test(username)) return 'auth.usernameInvalidChars';
   return undefined;
 }
 
@@ -50,6 +52,8 @@ function parseOptionalNumber(value: string): number | undefined {
  */
 export default function OnboardingScreen() {
   const theme = useTheme();
+  const t = useT();
+  const lang = useLanguage();
   const router = useRouter();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
 
@@ -89,8 +93,10 @@ export default function OnboardingScreen() {
     });
     setSubmitting(false);
     if (error) {
-      // Brukernavnfeil (f.eks. «Brukernavnet er opptatt.») vises på riktig steg
-      if (error.includes('Brukernavn')) {
+      // Brukernavnfeil (f.eks. «Brukernavnet er opptatt.») vises på riktig steg.
+      // Meldingen kan være oversatt (error.usernameTaken/-Format) eller komme
+      // rått fra DB-triggere på norsk — sjekk begge språk.
+      if (/brukernavn|username/i.test(error)) {
         setUsernameError(error);
         setStep(0);
       } else {
@@ -104,9 +110,9 @@ export default function OnboardingScreen() {
 
   const goNext = () => {
     if (step === 0) {
-      const error = validateUsername(username.trim());
-      setUsernameError(error);
-      if (error) return;
+      const errorKey = validateUsername(username.trim());
+      setUsernameError(errorKey ? t(errorKey) : undefined);
+      if (errorKey) return;
     }
     if (isLastStep) {
       void handleComplete();
@@ -122,7 +128,7 @@ export default function OnboardingScreen() {
     setStep((s) => Math.max(0, s - 1));
   };
 
-  const previewName = displayName.trim() || username.trim() || 'Deg';
+  const previewName = displayName.trim() || username.trim() || t('common.you');
 
   const renderStep = () => {
     switch (step) {
@@ -130,33 +136,33 @@ export default function OnboardingScreen() {
         return (
           <View style={{ gap: theme.spacing.lg }}>
             <View style={{ gap: theme.spacing.xs }}>
-              <AppText variant="title">Velg brukernavn</AppText>
+              <AppText variant="title">{t('auth.usernameTitle')}</AppText>
               <AppText variant="body" color="secondary">
-                Dette er navnet ditt i appen — venner finner deg med det.
+                {t('auth.usernameSubtitle')}
               </AppText>
             </View>
             <Input
-              label="Brukernavn"
+              label={t('auth.usernameLabel')}
               value={username}
               onChangeText={(text) => {
                 setUsername(text.toLowerCase());
                 if (usernameError) setUsernameError(undefined);
               }}
               error={usernameError}
-              placeholder="f.eks. ola.nordmann"
+              placeholder={t('auth.usernamePlaceholder')}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <Input
-              label="Visningsnavn"
+              label={t('auth.displayNameLabel')}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="f.eks. Ola Nordmann"
+              placeholder={t('auth.displayNamePlaceholder')}
               autoComplete="name"
               maxLength={40}
             />
             <AppText variant="caption" color="muted">
-              3–24 tegn. Småbokstaver, tall, punktum og understrek.
+              {t('auth.usernameHint')}
             </AppText>
           </View>
         );
@@ -164,9 +170,9 @@ export default function OnboardingScreen() {
         return (
           <View style={{ gap: theme.spacing.xl }}>
             <View style={{ gap: theme.spacing.xs }}>
-              <AppText variant="title">Velg avatar</AppText>
+              <AppText variant="title">{t('auth.avatarTitle')}</AppText>
               <AppText variant="body" color="secondary">
-                Velg en farge til initialene dine.
+                {t('auth.avatarSubtitle')}
               </AppText>
             </View>
             <View style={{ alignItems: 'center' }}>
@@ -207,15 +213,15 @@ export default function OnboardingScreen() {
         return (
           <View style={{ gap: theme.spacing.lg }}>
             <View style={{ gap: theme.spacing.xs }}>
-              <AppText variant="title">Kroppsdata</AppText>
+              <AppText variant="title">{t('auth.bodyTitle')}</AppText>
               <AppText variant="body" color="secondary">
-                Valgfritt — brukes til statistikk og relativ styrke.
+                {t('auth.bodySubtitle')}
               </AppText>
             </View>
             <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
               <View style={{ flex: 1 }}>
                 <Input
-                  label="Høyde (cm)"
+                  label={t('auth.heightLabel')}
                   value={heightStr}
                   onChangeText={setHeightStr}
                   placeholder="180"
@@ -224,7 +230,7 @@ export default function OnboardingScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Input
-                  label="Vekt (kg)"
+                  label={t('auth.weightLabel')}
                   value={weightStr}
                   onChangeText={setWeightStr}
                   placeholder="80"
@@ -233,7 +239,7 @@ export default function OnboardingScreen() {
               </View>
             </View>
             <AppText variant="caption" color="muted">
-              Du kan hoppe over dette og fylle inn senere i innstillinger.
+              {t('auth.bodyHint')}
             </AppText>
           </View>
         );
@@ -241,16 +247,16 @@ export default function OnboardingScreen() {
         return (
           <View style={{ gap: theme.spacing.lg }}>
             <View style={{ gap: theme.spacing.xs }}>
-              <AppText variant="title">Hva er målet ditt?</AppText>
+              <AppText variant="title">{t('auth.goalTitle')}</AppText>
               <AppText variant="body" color="secondary">
-                Velg det som passer best akkurat nå.
+                {t('auth.goalSubtitle')}
               </AppText>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
               {GOALS.map((g) => (
                 <Chip
                   key={g.value}
-                  label={g.label}
+                  label={goalLabel(g.value, lang)}
                   icon={g.icon}
                   selected={goal === g.value}
                   onPress={() => {
@@ -275,16 +281,16 @@ export default function OnboardingScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="Sett opp profilen"
+        title={t('auth.onboardingTitle')}
         hideBack={step === 0}
         onBack={goBack}
         right={
           <AppText variant="caption" color="muted">
-            {step + 1} av {STEP_COUNT}
+            {t('auth.stepOf', { step: step + 1, total: STEP_COUNT })}
           </AppText>
         }
       />
-      <ProgressBar progress={(step + 1) / STEP_COUNT} />
+      <ProgressBar progress={(step + 1) / STEP_COUNT} color={theme.colors.accent} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -300,7 +306,7 @@ export default function OnboardingScreen() {
         </ScrollView>
         <View style={{ paddingTop: theme.spacing.md, paddingBottom: theme.spacing.sm }}>
           <Button
-            title={isLastStep ? 'Fullfør' : 'Fortsett'}
+            title={isLastStep ? t('auth.finish') : t('auth.continue')}
             icon={isLastStep ? 'checkmark' : 'arrow-forward'}
             onPress={goNext}
             size="lg"

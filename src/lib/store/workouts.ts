@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { t } from '@/i18n';
 import { deletePRs, fetchMyBadges, fetchMyPRs, insertBadges, upsertPRs } from '@/lib/api/personal';
 import {
   deleteWorkout as apiDeleteWorkout,
@@ -296,7 +297,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         // brukeren kan prøve igjen. Feil kastes videre til skjermen.
         const saved = await insertWorkout({
           userId,
-          name: active.name || 'Treningsøkt',
+          name: active.name || t('training.defaultWorkoutName'),
           date,
           startedAt: active.startedAt,
           durationMin,

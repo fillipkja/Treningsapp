@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { ExercisePickerSheet } from '@/components/exercises/exercise-picker-sheet';
 import { AppText, Button, Card } from '@/components/ui';
+import { useLanguage, useT } from '@/i18n';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { getExerciseById } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
 import type { Exercise, TemplateExercise } from '@/types';
@@ -60,6 +62,8 @@ function NumField({ label, value, onChange, placeholder }: NumFieldProps) {
  * velg øvelser via ExercisePickerSheet og juster sett + reps-område per øvelse.
  */
 export function TemplateExerciseEditor({ exercises, onChange, addLabel }: TemplateExerciseEditorProps) {
+  const t = useT();
+  const lang = useLanguage();
   const { colors, spacing } = useTheme();
   const [pickerVisible, setPickerVisible] = useState(false);
 
@@ -82,7 +86,7 @@ export function TemplateExerciseEditor({ exercises, onChange, addLabel }: Templa
     <View style={{ gap: spacing.md }}>
       {exercises.length === 0 ? (
         <AppText variant="caption" color="muted">
-          Ingen øvelser lagt til ennå.
+          {t('training.noExercisesYet')}
         </AppText>
       ) : (
         exercises.map((exercise, index) => {
@@ -91,7 +95,7 @@ export function TemplateExerciseEditor({ exercises, onChange, addLabel }: Templa
             <Card key={`${exercise.exerciseId}-${index}`} style={{ gap: spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <AppText variant="bodyBold" numberOfLines={1} style={{ flex: 1 }}>
-                  {def?.name ?? exercise.exerciseId}
+                  {def ? exerciseDisplayName(def, lang) : exercise.exerciseId}
                 </AppText>
                 <Pressable
                   hitSlop={8}
@@ -103,17 +107,17 @@ export function TemplateExerciseEditor({ exercises, onChange, addLabel }: Templa
               </View>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <NumField
-                  label="Sett"
+                  label={t('common.sets')}
                   value={exercise.sets}
                   onChange={(v) => patch(index, { sets: v ?? 0 })}
                 />
                 <NumField
-                  label="Reps fra"
+                  label={t('training.repsFrom')}
                   value={exercise.repsMin}
                   onChange={(v) => patch(index, { repsMin: v ?? 0 })}
                 />
                 <NumField
-                  label="Reps til"
+                  label={t('training.repsTo')}
                   value={exercise.repsMax}
                   onChange={(v) => patch(index, { repsMax: v })}
                   placeholder="–"
@@ -125,7 +129,7 @@ export function TemplateExerciseEditor({ exercises, onChange, addLabel }: Templa
       )}
 
       <Button
-        title={addLabel ?? 'Legg til øvelse'}
+        title={addLabel ?? t('training.addExercise')}
         icon="add"
         variant="secondary"
         size="sm"

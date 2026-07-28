@@ -3,6 +3,9 @@ import * as Haptics from 'expo-haptics';
 import { useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, Avatar, Card } from '@/components/ui';
+import { PrBadge } from '@/components/workout/pr-badge';
+import { useLanguage, useT, type AppLanguage } from '@/i18n';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { formatDuration, formatKg, formatTimeAgo, formatVolume } from '@/lib/format';
 import { getExerciseById } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
@@ -30,8 +33,9 @@ function heaviestSet(exercise: WorkoutExercise) {
   return pool.reduce((best, s) => (s.weightKg > best.weightKg ? s : best), pool[0]);
 }
 
-function exerciseLine(exercise: WorkoutExercise): string {
-  const name = getExerciseById(exercise.exerciseId)?.name ?? 'Øvelse';
+function exerciseLine(exercise: WorkoutExercise, lang: AppLanguage, fallbackName: string): string {
+  const found = getExerciseById(exercise.exerciseId);
+  const name = found ? exerciseDisplayName(found, lang) : fallbackName;
   const top = heaviestSet(exercise);
   const weight = top && top.weightKg > 0 ? ` ${formatKg(top.weightKg)}` : '';
   return `${exercise.sets.length} × ${name}${weight}`;
@@ -46,7 +50,9 @@ export function WorkoutCard({
   onPress,
   onPressComments,
 }: WorkoutCardProps) {
-  const { colors, spacing, radius, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
+  const t = useT();
+  const lang = useLanguage();
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const visibleExercises = workout.exercises.slice(0, MAX_EXERCISE_LINES);
@@ -69,24 +75,7 @@ export function WorkoutCard({
 
   const prBadge =
     workout.prCount > 0 ? (
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.xs,
-          paddingHorizontal: spacing.sm + 2,
-          paddingVertical: spacing.xs,
-          borderRadius: radius.full,
-          borderWidth: 1,
-          borderColor: colors.gold,
-          backgroundColor: colors.surfaceElevated,
-        }}
-      >
-        <Ionicons name="trophy" size={13} color={colors.gold} />
-        <AppText variant="caption" style={{ color: colors.gold, fontWeight: '700' }}>
-          {workout.prCount > 1 ? `${workout.prCount} PR` : 'PR'}
-        </AppText>
-      </View>
+      <PrBadge label={workout.prCount > 1 ? `${workout.prCount} PR` : 'PR'} />
     ) : null;
 
   return (
@@ -129,7 +118,7 @@ export function WorkoutCard({
       <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.lg }}>
         <View style={{ flex: 1 }}>
           <AppText variant="label" color="muted">
-            Volum
+            {t('common.volume')}
           </AppText>
           <AppText style={[typography.heading, { marginTop: 2 }]}>
             {formatVolume(workout.totalVolumeKg)}
@@ -137,13 +126,13 @@ export function WorkoutCard({
         </View>
         <View style={{ flex: 1 }}>
           <AppText variant="label" color="muted">
-            Sett
+            {t('common.sets')}
           </AppText>
           <AppText style={[typography.heading, { marginTop: 2 }]}>{workout.totalSets}</AppText>
         </View>
         <View style={{ flex: 1 }}>
           <AppText variant="label" color="muted">
-            Tid
+            {t('common.time')}
           </AppText>
           <AppText style={[typography.heading, { marginTop: 2 }]} numberOfLines={1}>
             {workout.durationMin != null ? formatDuration(workout.durationMin) : '–'}
@@ -156,12 +145,12 @@ export function WorkoutCard({
         <View style={{ marginTop: spacing.md, gap: spacing.xs }}>
           {visibleExercises.map((exercise) => (
             <AppText key={exercise.id} variant="body" color="secondary" numberOfLines={1}>
-              {exerciseLine(exercise)}
+              {exerciseLine(exercise, lang, t('home.unknownExercise'))}
             </AppText>
           ))}
           {hiddenCount > 0 && (
             <AppText variant="caption" color="muted">
-              +{hiddenCount} til
+              {t('home.moreExercises', { count: hiddenCount })}
             </AppText>
           )}
         </View>
@@ -194,12 +183,12 @@ export function WorkoutCard({
               <Ionicons
                 name={liked ? 'heart' : 'heart-outline'}
                 size={22}
-                color={liked ? colors.accent : colors.textMuted}
+                color={liked ? colors.danger : colors.textMuted}
               />
             </Animated.View>
             <AppText
               variant="caption"
-              style={{ color: liked ? colors.accent : colors.textMuted, fontWeight: '600' }}
+              style={{ color: liked ? colors.danger : colors.textMuted, fontWeight: '600' }}
             >
               {workout.likes.length}
             </AppText>

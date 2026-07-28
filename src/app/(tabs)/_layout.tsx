@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
+import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth';
 import { useBootstrapData } from '@/lib/store/bootstrap';
 import { useTheme } from '@/theme';
 
 export default function TabLayout() {
   const theme = useTheme();
+  const t = useT();
   const status = useAuthStore((s) => s.status);
   useBootstrapData();
 
@@ -30,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Hjem',
+          title: t('home.title'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
           ),
@@ -39,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="trening"
         options={{
-          title: 'Trening',
+          title: t('training.title'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={24} color={color} />
           ),
@@ -48,7 +50,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="statistikk"
         options={{
-          title: 'Statistikk',
+          title: t('stats.title'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={24} color={color} />
           ),
@@ -57,7 +59,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="konkurranser"
         options={{
-          title: 'Konkurrer',
+          title: t('compete.title'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
           ),
@@ -66,7 +68,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profil"
         options={{
-          title: 'Profil',
+          title: t('profile.title'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
           ),

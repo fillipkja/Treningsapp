@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AppText, Button, Card, EmptyState, Screen, ScreenHeader } from '@/components/ui';
+import { t as tGlobal, useLanguage, useT } from '@/i18n';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { firstParam } from '@/lib/params';
 import { getExerciseById } from '@/lib/store/exercises';
@@ -13,7 +15,7 @@ import { useTheme } from '@/theme';
 import type { ProgramDay, TemplateExercise } from '@/types';
 
 function feilmelding(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.';
+  return error instanceof Error && error.message ? error.message : tGlobal('error.generic');
 }
 
 /** «4 × 5–8» eller «3 × 10» */
@@ -28,6 +30,8 @@ function formatSetsReps(exercise: TemplateExercise): string {
 export default function ProgramDetailScreen() {
   const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
   const { colors, spacing } = useTheme();
 
   const program = useProgramStore((s) => s.programs.find((p) => p.id === id));
@@ -41,7 +45,7 @@ export default function ProgramDetailScreen() {
     if (!programsLoaded) {
       return (
         <Screen>
-          <ScreenHeader title="Program" />
+          <ScreenHeader title={t('training.programTitle')} />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={colors.accent} />
           </View>
@@ -50,11 +54,11 @@ export default function ProgramDetailScreen() {
     }
     return (
       <Screen>
-        <ScreenHeader title="Program" />
+        <ScreenHeader title={t('training.programTitle')} />
         <EmptyState
           icon="calendar-outline"
-          title="Fant ikke programmet"
-          message="Programmet kan være slettet."
+          title={t('training.programNotFoundTitle')}
+          message={t('training.programNotFoundMessage')}
         />
       </Screen>
     );
@@ -62,9 +66,9 @@ export default function ProgramDetailScreen() {
 
   const confirmDelete = () => {
     confirmDialog({
-      title: 'Slett program',
-      message: `Er du sikker på at du vil slette «${program.name}»?`,
-      confirmLabel: 'Slett',
+      title: t('training.deleteProgramTitle'),
+      message: t('training.deleteProgramMessage', { name: program.name }),
+      confirmLabel: t('common.delete'),
       destructive: true,
       onConfirm: async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -72,7 +76,7 @@ export default function ProgramDetailScreen() {
           await deleteProgram(program.id);
           router.back();
         } catch (error) {
-          infoDialog('Kunne ikke slette programmet', feilmelding(error));
+          infoDialog(t('training.deleteProgramError'), feilmelding(error));
         }
       },
     });
@@ -86,9 +90,9 @@ export default function ProgramDetailScreen() {
     };
     if (useWorkoutStore.getState().active) {
       confirmDialog({
-        title: 'Pågående økt',
-        message: 'Du har allerede en økt i gang. Vil du forkaste den og starte en ny?',
-        confirmLabel: 'Forkast og start ny',
+        title: t('training.activeWorkoutTitle'),
+        message: t('training.activeWorkoutMessage'),
+        confirmLabel: t('training.discardAndStartNew'),
         destructive: true,
         onConfirm: begin,
       });
@@ -108,7 +112,7 @@ export default function ProgramDetailScreen() {
               onPress={() => {
                 Haptics.selectionAsync();
                 toggleProgramFavorite(program.id).catch((error: unknown) =>
-                  infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                  infoDialog(t('training.favoriteUpdateError'), feilmelding(error)),
                 );
               }}
               style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
@@ -136,7 +140,7 @@ export default function ProgramDetailScreen() {
         </AppText>
       ) : null}
       <AppText variant="label" color="muted" style={{ marginBottom: spacing.md }}>
-        {program.days.length} {program.days.length === 1 ? 'dag' : 'dager'}
+        {program.days.length} {program.days.length === 1 ? t('common.day') : t('common.days')}
       </AppText>
 
       <View style={{ gap: spacing.lg }}>
@@ -145,30 +149,33 @@ export default function ProgramDetailScreen() {
             <Card style={{ gap: spacing.md }}>
               <AppText variant="subheading">{day.name}</AppText>
               <View style={{ gap: spacing.sm }}>
-                {day.exercises.map((exercise, i) => (
-                  <View
-                    key={`${exercise.exerciseId}-${i}`}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-                  >
+                {day.exercises.map((exercise, i) => {
+                  const def = getExerciseById(exercise.exerciseId);
+                  return (
                     <View
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: colors.accent,
-                      }}
-                    />
-                    <AppText variant="body" numberOfLines={1} style={{ flex: 1 }}>
-                      {getExerciseById(exercise.exerciseId)?.name ?? exercise.exerciseId}
-                    </AppText>
-                    <AppText variant="bodyBold" color="secondary">
-                      {formatSetsReps(exercise)}
-                    </AppText>
-                  </View>
-                ))}
+                      key={`${exercise.exerciseId}-${i}`}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+                    >
+                      <View
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: colors.accent,
+                        }}
+                      />
+                      <AppText variant="body" numberOfLines={1} style={{ flex: 1 }}>
+                        {def ? exerciseDisplayName(def, lang) : exercise.exerciseId}
+                      </AppText>
+                      <AppText variant="bodyBold" color="secondary">
+                        {formatSetsReps(exercise)}
+                      </AppText>
+                    </View>
+                  );
+                })}
               </View>
               <Button
-                title="Start denne økten"
+                title={t('training.startThisWorkout')}
                 icon="play"
                 fullWidth
                 onPress={() => startDay(day)}

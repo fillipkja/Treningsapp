@@ -1,7 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { Keyboard, View } from 'react-native';
 import { AppText, Avatar, Button, Card, EmptyState, Input, Screen, ScreenHeader } from '@/components/ui';
+import { useT } from '@/i18n';
 import { fetchFriendState, sendFriendRequest } from '@/lib/api/friends';
 import { searchByUsername } from '@/lib/api/profiles';
 import { infoDialog } from '@/lib/dialogs';
@@ -12,7 +14,8 @@ import type { UserProfile } from '@/types';
 type Relation = 'self' | 'friend' | 'incoming' | 'outgoing' | 'none';
 
 export default function AddFriendScreen() {
-  const { spacing } = useTheme();
+  const t = useT();
+  const { colors, spacing } = useTheme();
   const myId = useAuthStore((s) => s.user?.id);
 
   const [query, setQuery] = useState('');
@@ -61,7 +64,7 @@ export default function AddFriendScreen() {
       setResult(profile);
       setSearched(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     } finally {
       setSearching(false);
     }
@@ -84,8 +87,8 @@ export default function AddFriendScreen() {
       setSentTo(profile.id);
     } catch (e) {
       infoDialog(
-        'Kunne ikke sende forespørselen',
-        e instanceof Error ? e.message : 'Prøv igjen.',
+        t('profile.friendsSendFailed'),
+        e instanceof Error ? e.message : t('error.generic'),
       );
     } finally {
       setSending(false);
@@ -95,27 +98,53 @@ export default function AddFriendScreen() {
   const statusText = (relation: Relation): string | null => {
     switch (relation) {
       case 'self':
-        return 'Dette er deg 👋';
+        return t('profile.friendsStatusSelf');
       case 'outgoing':
-        return 'Forespørsel sendt ✓';
+        return t('profile.friendsStatusSent');
       case 'friend':
-        return 'Dere er allerede venner ✓';
+        return t('profile.friendsStatusAlready');
       case 'incoming':
-        return 'Har allerede sendt deg en forespørsel — godta den i vennelisten';
+        return t('profile.friendsStatusIncoming');
       default:
         return null;
     }
   };
 
+  const renderStatus = (relation: Relation) => {
+    const positive = relation === 'outgoing' || relation === 'friend';
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.xs,
+          paddingVertical: spacing.xs,
+        }}
+      >
+        {positive ? (
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+        ) : null}
+        <AppText
+          variant="bodyBold"
+          color={positive ? 'success' : 'secondary'}
+          style={{ textAlign: 'center', flexShrink: 1 }}
+        >
+          {statusText(relation)}
+        </AppText>
+      </View>
+    );
+  };
+
   return (
     <Screen scroll>
-      <ScreenHeader title="Legg til venn" />
+      <ScreenHeader title={t('profile.friendsAdd')} />
 
       {/* Søkefelt */}
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
         <View style={{ flex: 1 }}>
           <Input
-            placeholder="@brukernavn"
+            placeholder={t('profile.friendsSearchPlaceholder')}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -125,7 +154,7 @@ export default function AddFriendScreen() {
           />
         </View>
         <Button
-          title="Søk"
+          title={t('common.search')}
           icon="search"
           onPress={search}
           loading={searching}
@@ -134,7 +163,7 @@ export default function AddFriendScreen() {
       </View>
 
       <AppText variant="caption" color="muted" style={{ marginTop: spacing.sm }}>
-        Brukernavn deles muntlig — spør vennen din om brukernavnet deres.
+        {t('profile.friendsSearchHint')}
       </AppText>
 
       {/* Feil ved søk */}
@@ -148,8 +177,8 @@ export default function AddFriendScreen() {
       {searched && !result ? (
         <EmptyState
           icon="search-outline"
-          title="Fant ingen med brukernavnet"
-          message="Sjekk stavingen og prøv igjen."
+          title={t('profile.friendsNoMatchTitle')}
+          message={t('profile.friendsNoMatchMessage')}
         />
       ) : null}
 
@@ -178,24 +207,14 @@ export default function AddFriendScreen() {
 
           {relationFor(result) === 'none' ? (
             <Button
-              title="Send venneforespørsel"
+              title={t('profile.friendsSendRequest')}
               icon="person-add-outline"
               onPress={() => send(result)}
               loading={sending}
               fullWidth
             />
           ) : (
-            <AppText
-              variant="bodyBold"
-              color={
-                relationFor(result) === 'outgoing' || relationFor(result) === 'friend'
-                  ? 'success'
-                  : 'secondary'
-              }
-              style={{ textAlign: 'center', paddingVertical: spacing.xs }}
-            >
-              {statusText(relationFor(result))}
-            </AppText>
+            renderStatus(relationFor(result))
           )}
         </Card>
       ) : null}

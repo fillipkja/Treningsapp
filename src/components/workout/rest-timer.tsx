@@ -12,6 +12,7 @@ import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, ProgressBar } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 
 /** Forhåndsvalg for hvile i sekunder */
@@ -42,6 +43,7 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
 ) {
   const { colors, spacing, radius } = useTheme();
   const insets = useSafeAreaInsets();
+  const t = useT();
 
   const [expanded, setExpanded] = useState(false);
   const [running, setRunning] = useState(false);
@@ -103,24 +105,32 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
       {running ? (
         <Animated.View entering={FadeInDown.duration(200)} style={[cardStyle, { minWidth: 240, gap: spacing.sm }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <Ionicons name="timer-outline" size={18} color={colors.accent} />
+            <Ionicons
+              name="timer-outline"
+              size={18}
+              color={remaining < 10 ? colors.accentWarm : colors.accent}
+            />
             <AppText variant="subheading" style={{ flex: 1, fontVariant: ['tabular-nums'] }}>
               {formatClock(remaining)}
             </AppText>
             <AppText variant="caption" color="muted">
-              Hvile {duration} s
+              {t('workout.restDuration', { seconds: duration })}
             </AppText>
             <Pressable hitSlop={8} onPress={cancel}>
               <Ionicons name="close-circle" size={22} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ProgressBar progress={duration > 0 ? remaining / duration : 0} height={5} />
+          <ProgressBar
+            progress={duration > 0 ? remaining / duration : 0}
+            height={5}
+            color={remaining < 10 ? colors.accentWarm : colors.accent}
+          />
         </Animated.View>
       ) : expanded ? (
         <Animated.View entering={FadeInDown.duration(200)} style={[cardStyle, { gap: spacing.md }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <AppText variant="label" color="muted" style={{ flex: 1 }}>
-              Hviletimer
+              {t('workout.restTimerTitle')}
             </AppText>
             <Pressable hitSlop={8} onPress={() => setExpanded(false)}>
               <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
@@ -145,8 +155,15 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <AppText variant="caption" style={{ fontWeight: '600' }}>
-                  {secs} s
+                <AppText
+                  variant="caption"
+                  style={{
+                    fontWeight: '600',
+                    color:
+                      secs === lastDurationRef.current ? colors.accent : colors.textPrimary,
+                  }}
+                >
+                  {t('workout.restSeconds', { seconds: secs })}
                 </AppText>
               </Pressable>
             ))}
@@ -164,7 +181,7 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
               color={autoStart ? colors.accent : colors.textMuted}
             />
             <AppText variant="caption" color="secondary">
-              Start automatisk når et sett fullføres
+              {t('workout.restAutoStart')}
             </AppText>
           </Pressable>
         </Animated.View>
@@ -183,7 +200,7 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
         >
           <Ionicons name="timer-outline" size={16} color={colors.accent} />
           <AppText variant="caption" style={{ fontWeight: '600' }}>
-            Hvile
+            {t('workout.restLabel')}
           </AppText>
         </Pressable>
       )}

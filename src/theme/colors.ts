@@ -19,10 +19,17 @@ export interface ThemeColors {
   /** Suksess/PR (grønn) */
   success: string;
   successMuted: string;
+  /** Varm aksent (oransje) til streak/energi */
+  accentWarm: string;
+  accentWarmMuted: string;
   warning: string;
   danger: string;
   /** Gull til rekorder og topplasseringer */
   gold: string;
+  /** Gradienter til hero-kort (aktiv økt, feiring, pall) */
+  gradientAccent: readonly [string, string];
+  gradientSuccess: readonly [string, string];
+  gradientGold: readonly [string, string];
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
@@ -46,9 +53,14 @@ export const darkColors: ThemeColors = {
   accentMuted: 'rgba(57, 135, 229, 0.16)',
   success: '#0ca30c',
   successMuted: 'rgba(12, 163, 12, 0.16)',
+  accentWarm: '#e0762e',
+  accentWarmMuted: 'rgba(224, 118, 46, 0.16)',
   warning: '#fab219',
   danger: '#e66767',
-  gold: '#c98500',
+  gold: '#e3b341',
+  gradientAccent: ['#3987e5', '#6b5ce8'],
+  gradientSuccess: ['#12b76a', '#0a7f4f'],
+  gradientGold: ['#e3b341', '#c47f1d'],
   textPrimary: '#ffffff',
   textSecondary: '#c3c2b7',
   textMuted: '#898781',
@@ -69,9 +81,14 @@ export const lightColors: ThemeColors = {
   accentMuted: 'rgba(42, 120, 214, 0.12)',
   success: '#006300',
   successMuted: 'rgba(12, 163, 12, 0.12)',
+  accentWarm: '#c65d15',
+  accentWarmMuted: 'rgba(198, 93, 21, 0.12)',
   warning: '#c98500',
   danger: '#d03b3b',
-  gold: '#c98500',
+  gold: '#a87616',
+  gradientAccent: ['#2a78d6', '#5747d1'],
+  gradientSuccess: ['#0e9c58', '#086b3f'],
+  gradientGold: ['#c9952c', '#a3690f'],
   textPrimary: '#0b0b0b',
   textSecondary: '#52514e',
   textMuted: '#898781',
@@ -103,3 +120,62 @@ export const avatarColors = [
   '#d55181',
   '#c98500',
 ] as const;
+
+/** Identitetsfarger per muskelgruppe — brukes på øvelsesfliser, chips og filtre.
+ *  Fast tilordning (farge følger muskelen, aldri posisjon i en liste). */
+export const muscleColors = {
+  dark: {
+    bryst: '#e66767',
+    rygg: '#3987e5',
+    skuldre: '#d95926',
+    biceps: '#9085e9',
+    triceps: '#d55181',
+    underarmer: '#c98500',
+    mage: '#199e70',
+    quads: '#5598e7',
+    hamstrings: '#b8762e',
+    setemuskler: '#c76fa0',
+    legger: '#5fae85',
+    korsrygg: '#8a93a6',
+    helkropp: '#c9a227',
+  },
+  light: {
+    bryst: '#cf4444',
+    rygg: '#2a78d6',
+    skuldre: '#c94d20',
+    biceps: '#6b5cc9',
+    triceps: '#b84a76',
+    underarmer: '#a87616',
+    mage: '#0f8a5f',
+    quads: '#3d7fc4',
+    hamstrings: '#9c6224',
+    setemuskler: '#a85a86',
+    legger: '#3f8f68',
+    korsrygg: '#5f6b80',
+    helkropp: '#9c7f1a',
+  },
+} as const;
+
+/** Identitetsfarger per utfordringstype — fast tilordning, delt på tvers av
+ *  konkurranse-skjermene. 'program' bruker success slik at lilla forblir
+ *  entydig biceps (muskel-identitet). */
+export const challengeTypeColors = {
+  dark: {
+    økter: darkColors.accent,
+    volum: darkColors.accentWarm,
+    prs: darkColors.gold,
+    program: darkColors.success,
+  },
+  light: {
+    økter: lightColors.accent,
+    volum: lightColors.accentWarm,
+    prs: lightColors.gold,
+    program: lightColors.success,
+  },
+} as const;
+
+/** Nivåfarger for merker */
+export const tierColors = {
+  dark: { bronse: '#c08a5a', sølv: '#a7b1bd', gull: '#e3b341' },
+  light: { bronse: '#8f5f33', sølv: '#6d7885', gull: '#a87616' },
+} as const;

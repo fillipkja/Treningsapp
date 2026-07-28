@@ -37,8 +37,8 @@ export interface Exercise {
   category: ExerciseCategory;
   instructions: string[];
   tips?: string[];
-  /** Emoji-plakat som placeholder for animasjon/video i øvelsesbiblioteket */
-  mediaEmoji: string;
+  /** @deprecated Erstattet av fargede øvelsesfliser (ExerciseTile). Beholdes for gamle egendefinerte øvelser i DB. */
+  mediaEmoji?: string;
   isCustom?: boolean;
 }
 
@@ -189,8 +189,7 @@ export type BadgeTier = 'bronse' | 'sølv' | 'gull';
 
 export interface BadgeDef {
   id: string;
-  name: string;
-  description: string;
+  /** Ionicons-navn (f.eks. 'trophy'). Navn/beskrivelse hentes fra i18n via badgeName/badgeDescription. */
   icon: string;
   tier: BadgeTier;
 }

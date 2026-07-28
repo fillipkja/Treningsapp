@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { AppText, Button, Card, Chip, EmptyState, Screen, ScreenHeader } from '@/components/ui';
+import { AppText, Button, Card, EmptyState, Screen, ScreenHeader } from '@/components/ui';
+import { PrBadge } from '@/components/workout/pr-badge';
+import { t as tGlobal, useT } from '@/i18n';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import { formatRelativeDate, formatTimeAgo, formatVolume } from '@/lib/format';
 import { useProgramStore } from '@/lib/store/programs';
@@ -18,7 +21,7 @@ function favoritesFirst<T extends { isFavorite: boolean }>(items: T[]): T[] {
 }
 
 function feilmelding(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Noe gikk galt. Prøv igjen.';
+  return error instanceof Error && error.message ? error.message : tGlobal('error.generic');
 }
 
 function SectionHeader({ title, actionTitle, onAction }: { title: string; actionTitle?: string; onAction?: () => void }) {
@@ -67,6 +70,7 @@ function FavoriteStar({ isFavorite, onToggle }: { isFavorite: boolean; onToggle:
 
 export default function TreningScreen() {
   const router = useRouter();
+  const t = useT();
   const { colors, spacing, radius } = useTheme();
 
   const active = useWorkoutStore((s) => s.active);
@@ -107,9 +111,9 @@ export default function TreningScreen() {
   const guardActive = (begin: () => void) => {
     if (useWorkoutStore.getState().active) {
       confirmDialog({
-        title: 'Pågående økt',
-        message: 'Du har allerede en økt i gang. Vil du forkaste den og starte en ny?',
-        confirmLabel: 'Forkast og start ny',
+        title: t('training.activeWorkoutTitle'),
+        message: t('training.activeWorkoutMessage'),
+        confirmLabel: t('training.discardAndStartNew'),
         destructive: true,
         onConfirm: begin,
       });
@@ -121,7 +125,7 @@ export default function TreningScreen() {
   const startEmpty = () =>
     guardActive(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      startWorkout('Treningsøkt');
+      startWorkout(t('training.defaultWorkoutName'));
       router.push('/workout/active');
     });
 
@@ -136,15 +140,15 @@ export default function TreningScreen() {
   if (!programsLoaded) {
     return (
       <Screen>
-        <ScreenHeader title="Trening" hideBack />
+        <ScreenHeader title={t('training.title')} hideBack />
         {loadError ? (
           <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl }}>
             <AppText variant="body" color="danger" style={{ textAlign: 'center' }}>
               {loadError}
             </AppText>
-            <Button title="Prøv igjen" variant="secondary" size="sm" onPress={loadOnce} />
+            <Button title={t('common.retry')} variant="secondary" size="sm" onPress={loadOnce} />
             {/* En tom økt trenger ingen serverdata — skal alltid være mulig */}
-            <Button title="Start tom økt" icon="add" onPress={startEmpty} />
+            <Button title={t('training.startEmpty')} icon="barbell" onPress={startEmpty} />
           </View>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -157,7 +161,7 @@ export default function TreningScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Trening" hideBack />
+      <ScreenHeader title={t('training.title')} hideBack />
 
       {/* Kom i gang / fortsett */}
       <Animated.View entering={FadeInDown.duration(300)}>
@@ -188,38 +192,68 @@ export default function TreningScreen() {
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <AppText variant="subheading" color="onAccent" numberOfLines={1}>
-                Fortsett økten
+                {t('training.continueWorkout')}
               </AppText>
               <AppText variant="caption" color="onAccent" numberOfLines={1} style={{ opacity: 0.85 }}>
-                {active.name} · startet {formatTimeAgo(active.startedAt)}
+                {t('training.activeSubtitle', { name: active.name, time: formatTimeAgo(active.startedAt) })}
               </AppText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.onAccent} />
           </Pressable>
         ) : (
-          <Card style={{ gap: spacing.md }}>
-            <AppText variant="subheading">Kom i gang</AppText>
-            <AppText variant="caption" color="muted">
-              Start en tom økt og legg til øvelser underveis.
-            </AppText>
-            <Button title="Start tom økt" icon="add" size="lg" fullWidth onPress={startEmpty} />
-          </Card>
+          /* Appens mest inviterende knapp: start tom økt */
+          <Pressable onPress={startEmpty} style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}>
+            <LinearGradient
+              colors={[...colors.gradientAccent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: radius.lg,
+                padding: spacing.lg,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.md,
+              }}
+            >
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: radius.full,
+                  backgroundColor: colors.onAccentMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="barbell" size={24} color={colors.onAccent} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="subheading" color="onAccent" numberOfLines={1}>
+                  {t('training.startEmpty')}
+                </AppText>
+                <AppText variant="caption" color="onAccent" numberOfLines={1} style={{ opacity: 0.85 }}>
+                  {t('training.startEmptyHint')}
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.onAccent} />
+            </LinearGradient>
+          </Pressable>
         )}
       </Animated.View>
 
       {/* Favorittøkter */}
       <Animated.View entering={FadeInDown.delay(60).duration(300)}>
         <SectionHeader
-          title="Favorittøkter"
-          actionTitle="+ Ny favorittøkt"
+          title={t('training.favorites')}
+          actionTitle={`+ ${t('training.newTemplate')}`}
           onAction={() => router.push('/templates/new')}
         />
         {templates.length === 0 ? (
           <EmptyState
             icon="star-outline"
-            title="Ingen favorittøkter"
-            message="Lag en mal du kan starte med ett trykk."
-            actionTitle="Ny favorittøkt"
+            title={t('training.noTemplatesTitle')}
+            message={t('training.noTemplatesMessage')}
+            actionTitle={t('training.newTemplate')}
             onAction={() => router.push('/templates/new')}
           />
         ) : (
@@ -232,19 +266,20 @@ export default function TreningScreen() {
                       {template.name}
                     </AppText>
                     <AppText variant="caption" color="muted">
-                      {template.exercises.length}{' '}
-                      {template.exercises.length === 1 ? 'øvelse' : 'øvelser'}
+                      {template.exercises.length === 1
+                        ? t('training.oneExercise')
+                        : t('training.exercisesCount', { count: template.exercises.length })}
                     </AppText>
                   </View>
                   <FavoriteStar
                     isFavorite={template.isFavorite}
                     onToggle={() =>
                       toggleTemplateFavorite(template.id).catch((error: unknown) =>
-                        infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                        infoDialog(t('training.favoriteUpdateError'), feilmelding(error)),
                       )
                     }
                   />
-                  <Button title="Start" size="sm" icon="play" onPress={() => startTemplate(template)} />
+                  <Button title={t('common.start')} size="sm" icon="play" onPress={() => startTemplate(template)} />
                 </View>
               </Card>
             ))}
@@ -255,22 +290,26 @@ export default function TreningScreen() {
       {/* Programmer */}
       <Animated.View entering={FadeInDown.delay(120).duration(300)}>
         <SectionHeader
-          title="Programmer"
-          actionTitle="+ Nytt program"
+          title={t('training.programs')}
+          actionTitle={`+ ${t('training.newProgram')}`}
           onAction={() => router.push('/programs/new')}
         />
         {programs.length === 0 ? (
           <EmptyState
             icon="calendar-outline"
-            title="Ingen programmer"
-            message="Bygg et treningsprogram med faste dager."
-            actionTitle="Nytt program"
+            title={t('training.noProgramsTitle')}
+            message={t('training.noProgramsMessage')}
+            actionTitle={t('training.newProgram')}
             onAction={() => router.push('/programs/new')}
           />
         ) : (
           <View style={{ gap: spacing.md }}>
             {favoritesFirst(programs).map((program: Program) => (
-              <Card key={program.id} onPress={() => router.push(`/programs/${program.id}`)}>
+              <Card
+                key={program.id}
+                onPress={() => router.push(`/programs/${program.id}`)}
+                style={{ borderLeftWidth: 3, borderLeftColor: colors.accent }}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
                   <View style={{ flex: 1, gap: spacing.xs }}>
                     <AppText variant="bodyBold" numberOfLines={1}>
@@ -282,14 +321,15 @@ export default function TreningScreen() {
                       </AppText>
                     ) : null}
                     <AppText variant="caption" color="secondary">
-                      {program.days.length} {program.days.length === 1 ? 'dag' : 'dager'}
+                      {program.days.length}{' '}
+                      {program.days.length === 1 ? t('common.day') : t('common.days')}
                     </AppText>
                   </View>
                   <FavoriteStar
                     isFavorite={program.isFavorite}
                     onToggle={() =>
                       toggleProgramFavorite(program.id).catch((error: unknown) =>
-                        infoDialog('Kunne ikke oppdatere favoritt', feilmelding(error)),
+                        infoDialog(t('training.favoriteUpdateError'), feilmelding(error)),
                       )
                     }
                   />
@@ -302,13 +342,13 @@ export default function TreningScreen() {
 
       {/* Historikk */}
       <Animated.View entering={FadeInDown.delay(180).duration(300)}>
-        <SectionHeader title="Historikk" />
+        <SectionHeader title={t('training.history')} />
         {history.length === 0 ? (
           <EmptyState
             icon="barbell-outline"
-            title="Ingen økter ennå"
-            message="Fullførte økter dukker opp her."
-            actionTitle="Start tom økt"
+            title={t('training.noHistoryTitle')}
+            message={t('training.noHistoryMessage')}
+            actionTitle={t('training.startEmpty')}
             onAction={startEmpty}
           />
         ) : (
@@ -337,7 +377,7 @@ export default function TreningScreen() {
                     </AppText>
                   </View>
                   {workout.prCount > 0 ? (
-                    <Chip label={`${workout.prCount} PR`} icon="trophy" selected />
+                    <PrBadge label={t('training.prCount', { count: workout.prCount })} />
                   ) : null}
                   <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 </Pressable>

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
@@ -15,11 +16,13 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { StatTile } from '@/components/charts';
+import { t as translateNow, useLanguage, useT } from '@/i18n';
 import {
   deleteWorkout as apiDeleteWorkout,
   fetchWorkoutById,
   setLike,
 } from '@/lib/api/workouts';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { findExercise } from '@/lib/data/exercises';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import {
@@ -31,7 +34,7 @@ import {
   formatTimeAgo,
   formatVolume,
 } from '@/lib/format';
-import { BADGE_DEFS } from '@/lib/logic/badges';
+import { BADGE_DEFS, badgeName } from '@/lib/logic/badges';
 import { useAuthStore } from '@/lib/store/auth';
 import { useExerciseStore } from '@/lib/store/exercises';
 import { useWorkoutStore } from '@/lib/store/workouts';
@@ -48,7 +51,7 @@ function setLine(set: WorkoutSet): string {
 }
 
 function feilmelding(error: unknown): string {
-  return error instanceof Error ? error.message : 'Noe gikk galt. Prøv igjen.';
+  return error instanceof Error ? error.message : translateNow('error.generic');
 }
 
 type FetchStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -60,6 +63,8 @@ export default function WorkoutDetailScreen() {
 
   const { colors, spacing, radius } = useTheme();
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
 
   const me = useAuthStore((s) => s.user);
   const myWorkouts = useWorkoutStore((s) => s.workouts);
@@ -115,18 +120,20 @@ export default function WorkoutDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workoutKey]);
 
-  const exerciseName = (id: string): string =>
-    (findExercise(id) ?? customExercises.find((e) => e.id === id))?.name ?? 'Ukjent øvelse';
+  const exerciseName = (id: string): string => {
+    const exercise = findExercise(id) ?? customExercises.find((e) => e.id === id);
+    return exercise ? exerciseDisplayName(exercise, lang) : t('workout.unknownExercise');
+  };
 
   if (!workout) {
     if (status === 'loading') {
       return (
         <Screen>
-          <ScreenHeader title="Økt" />
+          <ScreenHeader title={t('workout.screenTitle')} />
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md }}>
             <ActivityIndicator color={colors.accent} />
             <AppText variant="caption" color="muted">
-              Laster økt …
+              {t('workout.loading')}
             </AppText>
           </View>
         </Screen>
@@ -135,12 +142,12 @@ export default function WorkoutDetailScreen() {
     if (status === 'error') {
       return (
         <Screen>
-          <ScreenHeader title="Økt" />
+          <ScreenHeader title={t('workout.screenTitle')} />
           <EmptyState
             icon="cloud-offline-outline"
-            title="Kunne ikke laste økten"
+            title={t('workout.loadErrorTitle')}
             message={loadError ?? undefined}
-            actionTitle="Prøv igjen"
+            actionTitle={t('common.retry')}
             onAction={() => setStatus('loading')}
           />
         </Screen>
@@ -148,12 +155,12 @@ export default function WorkoutDetailScreen() {
     }
     return (
       <Screen>
-        <ScreenHeader title="Økt" />
+        <ScreenHeader title={t('workout.screenTitle')} />
         <EmptyState
           icon="barbell-outline"
-          title="Fant ikke økten"
-          message="Økten kan være slettet, eller den er ikke delt med deg."
-          actionTitle="Gå tilbake"
+          title={t('workout.notFoundTitle')}
+          message={t('workout.notFoundMessage')}
+          actionTitle={t('common.back')}
           onAction={() => router.back()}
         />
       </Screen>
@@ -173,7 +180,7 @@ export default function WorkoutDetailScreen() {
       await setLike(workout.id, me.id, nextLiked);
     } catch (error) {
       setLikes(before);
-      infoDialog('Kunne ikke oppdatere', feilmelding(error));
+      infoDialog(t('workout.likeErrorTitle'), feilmelding(error));
     }
   };
 
@@ -187,7 +194,7 @@ export default function WorkoutDetailScreen() {
         r && r.workout.id === workout.id ? { ...r, workout: { ...r.workout, isShared: next } } : r,
       );
     } catch (error) {
-      infoDialog('Kunne ikke endre deling', feilmelding(error));
+      infoDialog(t('workout.shareErrorTitle'), feilmelding(error));
     } finally {
       setSharePending(false);
     }
@@ -195,9 +202,9 @@ export default function WorkoutDetailScreen() {
 
   const confirmDelete = () => {
     confirmDialog({
-      title: 'Slett økt',
-      message: 'Økten og alle sett slettes permanent.',
-      confirmLabel: 'Slett',
+      title: t('workout.deleteTitle'),
+      message: t('workout.deleteMessage'),
+      confirmLabel: t('common.delete'),
       destructive: true,
       onConfirm: async () => {
         setDeleting(true);
@@ -210,7 +217,7 @@ export default function WorkoutDetailScreen() {
           router.back();
         } catch (error) {
           setDeleting(false);
-          infoDialog('Kunne ikke slette økten', feilmelding(error));
+          infoDialog(t('workout.deleteErrorTitle'), feilmelding(error));
         }
       },
     });
@@ -257,58 +264,93 @@ export default function WorkoutDetailScreen() {
 
         {celebrate && isMine ? (
           <Animated.View entering={FadeInDown.duration(350)}>
-            <Card
+            <LinearGradient
+              colors={[...colors.gradientSuccess]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
+                borderRadius: radius.xl,
+                padding: spacing.xl,
                 alignItems: 'center',
                 gap: spacing.sm,
-                borderColor: colors.success,
-                backgroundColor: colors.successMuted,
               }}
             >
-              <AppText style={{ fontSize: 44 }}>🎉</AppText>
-              <AppText variant="title">Økt fullført!</AppText>
-              <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                {formatVolume(workout.totalVolumeKg)} løftet · {workout.totalSets} sett ·{' '}
-                {formatDuration(workout.durationMin ?? 0)}
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: radius.full,
+                  backgroundColor: colors.onAccentMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="trophy" size={28} color={colors.onAccent} />
+              </View>
+              <AppText variant="title" color="onAccent">
+                {t('workout.celebrationTitle')}
+              </AppText>
+              <AppText variant="body" color="onAccent" style={{ textAlign: 'center', opacity: 0.9 }}>
+                {t('workout.celebrationStats', {
+                  volume: formatVolume(workout.totalVolumeKg),
+                  sets: workout.totalSets,
+                  duration: formatDuration(workout.durationMin ?? 0),
+                })}
               </AppText>
               {prExerciseNames.length > 0 ? (
                 <View style={{ alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs }}>
-                  <AppText variant="label" style={{ color: colors.gold }}>
-                    Nye rekorder
+                  <AppText variant="label" color="onAccent" style={{ opacity: 0.8 }}>
+                    {t('workout.newRecords')}
                   </AppText>
                   {prExerciseNames.map((name) => (
-                    <AppText key={name} variant="bodyBold" style={{ color: colors.gold }}>
-                      🏆 {name}
-                    </AppText>
+                    <View
+                      key={name}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}
+                    >
+                      <Ionicons name="star" size={14} color={colors.onAccent} />
+                      <AppText variant="bodyBold" color="onAccent">
+                        {name}
+                      </AppText>
+                    </View>
                   ))}
                 </View>
               ) : null}
               {newBadges.length > 0 ? (
                 <View style={{ alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs }}>
-                  <AppText variant="label" color="muted">
-                    Nye merker
+                  <AppText variant="label" color="onAccent" style={{ opacity: 0.8 }}>
+                    {t('workout.newBadges')}
                   </AppText>
                   {newBadges.map((badge) => (
-                    <AppText key={badge.id} variant="bodyBold">
-                      {badge.icon} {badge.name}
-                    </AppText>
+                    <View
+                      key={badge.id}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}
+                    >
+                      <Ionicons
+                        name={badge.icon as keyof typeof Ionicons.glyphMap}
+                        size={14}
+                        color={colors.onAccent}
+                      />
+                      <AppText variant="bodyBold" color="onAccent">
+                        {badgeName(badge.id, lang)}
+                      </AppText>
+                    </View>
                   ))}
                 </View>
               ) : null}
-            </Card>
+            </LinearGradient>
           </Animated.View>
         ) : null}
 
         {/* Statistikk */}
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <StatTile label="Volum" value={formatVolume(workout.totalVolumeKg)} />
+            <StatTile label={t('common.volume')} value={formatVolume(workout.totalVolumeKg)} />
           </View>
           <View style={{ flex: 1 }}>
-            <StatTile label="Sett" value={formatNumber(workout.totalSets)} />
+            <StatTile label={t('common.sets')} value={formatNumber(workout.totalSets)} />
           </View>
           <View style={{ flex: 1 }}>
-            <StatTile label="Varighet" value={formatDuration(workout.durationMin ?? 0)} />
+            <StatTile label={t('workout.duration')} value={formatDuration(workout.durationMin ?? 0)} />
           </View>
         </View>
 
@@ -327,8 +369,8 @@ export default function WorkoutDetailScreen() {
             <Ionicons name="trophy" size={18} color={colors.gold} />
             <AppText variant="bodyBold" style={{ color: colors.gold }}>
               {workout.prCount === 1
-                ? '1 personlig rekord'
-                : `${workout.prCount} personlige rekorder`}
+                ? t('workout.prCountOne')
+                : t('workout.prCountMany', { count: workout.prCount })}
             </AppText>
           </View>
         ) : null}
@@ -362,7 +404,7 @@ export default function WorkoutDetailScreen() {
             </Pressable>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Button
-                title="Kommenter"
+                title={t('workout.comment')}
                 icon="chatbubble-ellipses-outline"
                 variant="ghost"
                 size="sm"
@@ -384,7 +426,7 @@ export default function WorkoutDetailScreen() {
               </Pressable>
               <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
                 {we.sets.map((set) => {
-                  const label = set.isWarmup ? 'O' : String(++workingIndex);
+                  const label = set.isWarmup ? t('workout.warmupShort') : String(++workingIndex);
                   return (
                     <View
                       key={set.id}
@@ -435,7 +477,7 @@ export default function WorkoutDetailScreen() {
         {workout.notes ? (
           <Card>
             <AppText variant="label" color="muted" style={{ marginBottom: spacing.xs }}>
-              Notater
+              {t('workout.notesLabel')}
             </AppText>
             <AppText variant="body" color="secondary">
               {workout.notes}
@@ -449,9 +491,9 @@ export default function WorkoutDetailScreen() {
             <Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flex: 1 }}>
-                  <AppText variant="bodyBold">Del med venner</AppText>
+                  <AppText variant="bodyBold">{t('workout.shareTitle')}</AppText>
                   <AppText variant="caption" color="muted">
-                    Økten vises i feeden til vennene dine.
+                    {t('workout.shareDescription')}
                   </AppText>
                 </View>
                 <Switch
@@ -466,7 +508,7 @@ export default function WorkoutDetailScreen() {
 
             <Card>
               <Button
-                title="Slett økt"
+                title={t('workout.deleteTitle')}
                 icon="trash-outline"
                 variant="danger"
                 size="sm"

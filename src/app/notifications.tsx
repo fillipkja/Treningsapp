@@ -4,11 +4,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 import { AppText, Button, Divider, EmptyState, Screen, ScreenHeader } from '@/components/ui';
+import { useT, type TranslationKey } from '@/i18n';
+import type { NotificationWithActor } from '@/lib/api/notifications';
 import { infoDialog } from '@/lib/dialogs';
 import { formatTimeAgo } from '@/lib/format';
 import { useNotificationStore } from '@/lib/store/notifications';
 import { useTheme } from '@/theme';
-import type { AppNotification } from '@/types';
 
 // Varsler opprettes av triggere på serveren. Databasen kan inneholde typer
 // som ikke finnes i domenetypen (f.eks. 'venn_akseptert') — rendring og
@@ -27,11 +28,42 @@ const TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 const FALLBACK_ICON: keyof typeof Ionicons.glyphMap = 'notifications-outline';
 
+// Typefarge = varselets identitet: hjerte i danger, kommentar i accent,
+// rekord og merker i gull, venner i success. Utfordring bruker accent
+// (flag-ikonet skiller den) — accentWarm er reservert volum/streak.
+type TypeColorKey = 'danger' | 'accent' | 'gold' | 'success';
+const TYPE_COLOR_KEYS: Record<string, TypeColorKey | undefined> = {
+  like: 'danger',
+  kommentar: 'accent',
+  venn_pr: 'gold',
+  badge: 'gold',
+  venneforespørsel: 'success',
+  venn_akseptert: 'success',
+  utfordring: 'accent',
+};
+
+// Kjente typer komponeres lokalisert klientside fra type + aktør.
+const TYPE_TEXT_KEYS: Record<string, TranslationKey | undefined> = {
+  like: 'notifications.like',
+  kommentar: 'notifications.comment',
+  venn_pr: 'notifications.friendPr',
+  venneforespørsel: 'notifications.friendRequest',
+  venn_akseptert: 'notifications.friendAccepted',
+  utfordring: 'notifications.challenge',
+};
+
+// Gamle varsler har title/body med emojier fra serveren — strippes ved visning.
+const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{FE0F}]/gu;
+function stripEmoji(text: string): string {
+  return text.replace(EMOJI_RE, '').replace(/ {2,}/g, ' ').trim();
+}
+
 export default function NotificationsScreen() {
   const { colors, spacing, radius } = useTheme();
   const router = useRouter();
+  const t = useT();
 
-  const notifications = useNotificationStore((s) => s.notifications);
+  const notifications = useNotificationStore((s) => s.notifications) as NotificationWithActor[];
   const loaded = useNotificationStore((s) => s.loaded);
   const loading = useNotificationStore((s) => s.loading);
   const load = useNotificationStore((s) => s.load);
@@ -55,11 +87,11 @@ export default function NotificationsScreen() {
   const sections = useMemo(() => {
     const fresh = notifications.filter((n) => !n.read);
     const earlier = notifications.filter((n) => n.read);
-    const out: { title: string; data: AppNotification[] }[] = [];
-    if (fresh.length > 0) out.push({ title: 'Nye', data: fresh });
-    if (earlier.length > 0) out.push({ title: 'Tidligere', data: earlier });
+    const out: { title: string; data: NotificationWithActor[] }[] = [];
+    if (fresh.length > 0) out.push({ title: t('notifications.sectionNew'), data: fresh });
+    if (earlier.length > 0) out.push({ title: t('notifications.sectionEarlier'), data: earlier });
     return out;
-  }, [notifications]);
+  }, [notifications, t]);
 
   const hasUnread = notifications.some((n) => !n.read);
 
@@ -68,13 +100,16 @@ export default function NotificationsScreen() {
     try {
       await markAllRead();
     } catch (error) {
-      infoDialog('Kunne ikke oppdatere', error instanceof Error ? error.message : undefined);
+      infoDialog(
+        t('notifications.updateFailedTitle'),
+        error instanceof Error ? error.message : undefined,
+      );
     } finally {
       setMarkingAll(false);
     }
   };
 
-  const openNotification = (n: AppNotification) => {
+  const openNotification = (n: NotificationWithActor) => {
     Haptics.selectionAsync();
     // Optimistisk i store — feiler kallet, reverteres lesestatusen stille
     markRead(n.id).catch(() => undefined);
@@ -100,17 +135,34 @@ export default function NotificationsScreen() {
     }
   };
 
+  /**
+   * Kjent type + aktør -> lokalisert tekst komponert klientside. For
+   * kommentarer inneholder DB-body selve kommentaren — vis den som undertekst.
+   * Ukjent type eller manglende aktør -> lagret title/body (gamle varsler).
+   */
+  const notificationText = (n: NotificationWithActor): { title: string; subtitle?: string } => {
+    const key = TYPE_TEXT_KEYS[n.type];
+    if (key && n.actor) {
+      return {
+        title: t(key, { name: n.actor.displayName }),
+        subtitle: n.type === 'kommentar' && n.body ? stripEmoji(n.body) : undefined,
+      };
+    }
+    const body = stripEmoji(n.body);
+    return { title: stripEmoji(n.title), subtitle: body.length > 0 ? body : undefined };
+  };
+
   const initialLoading = loading && !loaded;
 
   return (
     <Screen padded={false}>
       <View style={{ paddingHorizontal: spacing.screen }}>
         <ScreenHeader
-          title="Varsler"
+          title={t('notifications.title')}
           right={
             hasUnread ? (
               <Button
-                title="Merk alt lest"
+                title={t('notifications.markAllRead')}
                 variant="ghost"
                 size="sm"
                 loading={markingAll}
@@ -125,7 +177,7 @@ export default function NotificationsScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md }}>
           <ActivityIndicator size="large" color={colors.accent} />
           <AppText variant="body" color="muted">
-            Henter varsler …
+            {t('notifications.loading')}
           </AppText>
         </View>
       ) : loadError && notifications.length === 0 ? (
@@ -133,13 +185,13 @@ export default function NotificationsScreen() {
           <AppText variant="body" style={{ color: colors.danger, textAlign: 'center' }}>
             {loadError}
           </AppText>
-          <Button title="Prøv igjen" variant="secondary" icon="refresh" onPress={retryLoad} />
+          <Button title={t('common.retry')} variant="secondary" icon="refresh" onPress={retryLoad} />
         </View>
       ) : notifications.length === 0 ? (
         <EmptyState
           icon="notifications-off-outline"
-          title="Ingen varsler"
-          message="Likes, kommentarer, venneforespørsler og utfordringer dukker opp her."
+          title={t('notifications.emptyTitle')}
+          message={t('notifications.emptyMessage')}
         />
       ) : (
         <SectionList
@@ -161,52 +213,58 @@ export default function NotificationsScreen() {
             </AppText>
           )}
           ItemSeparatorComponent={Divider}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => openNotification(item)}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.md,
-                paddingVertical: spacing.md,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: radius.full,
-                  backgroundColor: colors.accentMuted,
+          renderItem={({ item }) => {
+            const tint = colors[TYPE_COLOR_KEYS[item.type] ?? 'accent'];
+            const { title, subtitle } = notificationText(item);
+            return (
+              <Pressable
+                onPress={() => openNotification(item)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                  gap: spacing.md,
+                  paddingVertical: spacing.md,
+                  opacity: pressed ? 0.7 : 1,
+                })}
               >
-                <Ionicons name={TYPE_ICONS[item.type] ?? FALLBACK_ICON} size={19} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppText variant="bodyBold" numberOfLines={1}>
-                  {item.title}
-                </AppText>
-                <AppText variant="body" color="secondary" numberOfLines={2} style={{ marginTop: 1 }}>
-                  {item.body}
-                </AppText>
-                <AppText variant="caption" color="muted" style={{ marginTop: 2 }}>
-                  {formatTimeAgo(item.createdAt)}
-                </AppText>
-              </View>
-              {!item.read && (
                 <View
                   style={{
-                    width: 9,
-                    height: 9,
+                    width: 42,
+                    height: 42,
                     borderRadius: radius.full,
-                    backgroundColor: colors.accent,
+                    backgroundColor: `${tint}29`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                />
-              )}
-            </Pressable>
-          )}
+                >
+                  <Ionicons name={TYPE_ICONS[item.type] ?? FALLBACK_ICON} size={19} color={tint} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodyBold" numberOfLines={2}>
+                    {title}
+                  </AppText>
+                  {subtitle ? (
+                    <AppText variant="body" color="secondary" numberOfLines={2} style={{ marginTop: 1 }}>
+                      {subtitle}
+                    </AppText>
+                  ) : null}
+                  <AppText variant="caption" color="muted" style={{ marginTop: 2 }}>
+                    {formatTimeAgo(item.createdAt)}
+                  </AppText>
+                </View>
+                {!item.read && (
+                  <View
+                    style={{
+                      width: 9,
+                      height: 9,
+                      borderRadius: radius.full,
+                      backgroundColor: colors.accent,
+                    }}
+                  />
+                )}
+              </Pressable>
+            );
+          }}
         />
       )}
     </Screen>

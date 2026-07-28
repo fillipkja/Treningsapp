@@ -12,6 +12,8 @@ export interface CalendarHeatmapProps {
   month: Date;
   /** Nøkkel 'yyyy-MM-dd' → intensitet 0–4 */
   values: Record<string, number>;
+  /** Ukedagsheader, 7 etiketter fra mandag (default norsk) */
+  dayLabels?: string[];
   onDayPress?: (dateKey: string) => void;
 }
 
@@ -23,7 +25,12 @@ const GAP = 4;
 const INK_ON_LIGHT = '#0f0f0f';
 const INK_ON_DARK = '#ffffff';
 
-export function CalendarHeatmap({ month, values, onDayPress }: CalendarHeatmapProps) {
+export function CalendarHeatmap({
+  month,
+  values,
+  dayLabels = WEEKDAYS,
+  onDayPress,
+}: CalendarHeatmapProps) {
   const { colors, isDark, radius } = useTheme();
   const [width, setWidth] = useState(0);
 
@@ -49,7 +56,7 @@ export function CalendarHeatmap({ month, values, onDayPress }: CalendarHeatmapPr
       {width > 0 && (
         <>
           <View style={styles.row}>
-            {WEEKDAYS.map((day, i) => (
+            {dayLabels.map((day, i) => (
               <Text
                 key={`${day}-${i}`}
                 style={[styles.weekday, { width: cellSize, color: colors.textMuted }]}

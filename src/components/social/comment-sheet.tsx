@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { AppText, Avatar, Button, Input, Sheet } from '@/components/ui';
+import { useT } from '@/i18n';
 import { addComment, fetchCommentsWithAuthors } from '@/lib/api/workouts';
 import { infoDialog } from '@/lib/dialogs';
 import { formatTimeAgo } from '@/lib/format';
@@ -35,6 +36,7 @@ interface CommentItem {
  */
 export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: CommentSheetProps) {
   const { colors, spacing, radius } = useTheme();
+  const t = useT();
   const me = useAuthStore((s) => s.user);
 
   const [items, setItems] = useState<CommentItem[]>([]);
@@ -55,7 +57,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
         if (!cancelled) setItems(rows);
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('error.generic'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -63,7 +65,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
     return () => {
       cancelled = true;
     };
-  }, [visible, workoutId, attempt]);
+  }, [visible, workoutId, attempt, t]);
 
   const send = async () => {
     const trimmed = text.trim();
@@ -78,8 +80,8 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
       onCommentAdded?.(comment);
     } catch (e) {
       infoDialog(
-        'Kunne ikke sende kommentaren',
-        e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.',
+        t('workout.commentSendError'),
+        e instanceof Error ? e.message : t('error.generic'),
       );
     } finally {
       setSending(false);
@@ -89,7 +91,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
   const canSend = text.trim().length > 0 && !sending;
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Kommentarer">
+    <Sheet visible={visible} onClose={onClose} title={t('workout.commentsTitle')}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
           <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
@@ -101,7 +103,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
               {error}
             </AppText>
             <Button
-              title="Prøv igjen"
+              title={t('common.retry')}
               variant="secondary"
               size="sm"
               onPress={() => setAttempt((n) => n + 1)}
@@ -113,7 +115,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
             color="muted"
             style={{ textAlign: 'center', paddingVertical: spacing.lg }}
           >
-            Ingen kommentarer ennå — bli den første!
+            {t('workout.noCommentsYet')}
           </AppText>
         ) : (
           <ScrollView
@@ -135,7 +137,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
                     style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm }}
                   >
                     <AppText variant="bodyBold" numberOfLines={1} style={{ flexShrink: 1 }}>
-                      {author?.displayName ?? 'Ukjent'}
+                      {author?.displayName ?? t('compete.unknownUser')}
                     </AppText>
                     <AppText variant="caption" color="muted">
                       {formatTimeAgo(comment.createdAt)}
@@ -161,7 +163,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
         >
           <View style={{ flex: 1 }}>
             <Input
-              placeholder="Skriv en kommentar …"
+              placeholder={t('workout.commentPlaceholder')}
               value={text}
               onChangeText={setText}
               maxLength={500}
