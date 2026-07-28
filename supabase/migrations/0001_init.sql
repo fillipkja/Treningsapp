@@ -431,8 +431,12 @@ as $$
   );
 $$;
 
+-- creator_id-sjekken må stå direkte i policyen (ikke bare i funksjonen):
+-- ved INSERT ... RETURNING ser ikke funksjonens subquery den nye raden
+-- (statement-snapshot), så skaperen ville fått RLS-feil på returnert rad.
 create policy "challenges_select_member" on public.challenges
-  for select to authenticated using (public.is_challenge_member(id));
+  for select to authenticated
+  using (creator_id = auth.uid() or public.is_challenge_member(id));
 create policy "challenges_insert_creator" on public.challenges
   for insert to authenticated with check (creator_id = auth.uid());
 create policy "challenges_delete_creator" on public.challenges

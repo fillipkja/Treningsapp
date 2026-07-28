@@ -1,8 +1,8 @@
 # LØFT 🏋️
 
-En moderne treningslogg for styrketrening — logg økter, følg utviklingen din med grafer, sett personlige mål og lås opp merker. Bygget med **Expo (React Native) + TypeScript** og kjører på **web, iOS og Android** fra samme kodebase. Mørkt premium-design som standard.
+«Strava for styrketrening» — logg økter, følg venners trening, konkurrer på ukentlige rangeringer og lås opp merker. Bygget med **Expo (React Native) + TypeScript** og kjører på **web, iOS og Android** fra samme kodebase. Mørkt premium-design som standard.
 
-**Alt lagres lokalt på enheten din** (localStorage på web, AsyncStorage på mobil). Ingen konto, ingen server, ingen fiktive data.
+**Ekte flerbruker:** kontoer med e-post/passord, venner, feed, likes, kommentarer og konkurranser — alt lagret i Postgres (Supabase) med row-level security. Udelte økter er usynlige for alle andre, håndhevet av databasen selv.
 
 ## Bruk den
 
@@ -66,6 +66,12 @@ npx expo export --platform web   # bygger til dist/
 
 `dist/` publiseres til GitHub Pages (gh-pages-branch). `experiments.baseUrl` i app.json er satt til `/Treningsapp` for å matche repo-navnet.
 
-## Veien videre
+## Backend
 
-Datamodellen har allerede feltene et sosialt lag trenger (deling, likes, kommentarer, deltakere i utfordringer) — de er bevisst ikke eksponert i UI før en ekte backend (f.eks. Supabase) med ekte brukere er koblet på. Native app-lansering til App Store/Google Play gjøres med EAS (`eas.json` ligger klar).
+Supabase (Postgres + Auth). Hele skjemaet ligger i `supabase/migrations/0001_init.sql`: tabeller, row-level security-policyer, varsel-triggere og RPC-er (`friend_leaderboard`, `challenge_standings`). Varsler kan kun opprettes av databasetriggere — aldri av klienter. Aggregater (volum/sett/PR-er) beregnes av databasen fra settene, så rangeringer kan ikke jukses.
+
+Integrasjonstester (16 stk, inkl. angrepsscenarier mot RLS): `SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/integration-test.mjs`
+
+Frontend-hemmeligheter: kun `EXPO_PUBLIC_SUPABASE_URL` og `EXPO_PUBLIC_SUPABASE_ANON_KEY` i `.env` — anon-nøkkelen er offentlig per design (RLS beskytter dataene). `service_role`-nøkkelen skal ALDRI i klientkode eller repo.
+
+Native app-lansering til App Store/Google Play gjøres med EAS (`eas.json` ligger klar).
