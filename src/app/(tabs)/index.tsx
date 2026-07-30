@@ -10,15 +10,19 @@ import { StatTile } from '@/components/charts';
 import { CommentSheet } from '@/components/social/comment-sheet';
 import { WorkoutCard } from '@/components/workout/workout-card';
 import { AppText, Avatar, Button, Card, CountBadge, EmptyState, Screen } from '@/components/ui';
-import { t as tGlobal, useT } from '@/i18n';
+import { t as tGlobal, useLanguage, useT } from '@/i18n';
+import { muscleLabel } from '@/i18n/labels';
 import { fetchFeed, setLike } from '@/lib/api/workouts';
 import { infoDialog } from '@/lib/dialogs';
 import { formatFullDate, formatVolume } from '@/lib/format';
 import { hasLegacyData, migrateLegacyData } from '@/lib/legacy-migration';
 import { periodInterval, workoutsInInterval } from '@/lib/logic/leaderboard';
+import { muscleStatuses, staleMuscles } from '@/lib/logic/muscles';
 import { currentStreak } from '@/lib/logic/streaks';
 import { useAuthStore } from '@/lib/store/auth';
 import { refreshAll } from '@/lib/store/bootstrap';
+import { findExercise } from '@/lib/data/exercises';
+import { useExerciseStore } from '@/lib/store/exercises';
 import { useUnreadCount } from '@/lib/store/notifications';
 import { useWorkoutStore } from '@/lib/store/workouts';
 import { useTheme } from '@/theme';
@@ -39,10 +43,12 @@ function feilmelding(error: unknown): string {
 export default function HomeScreen() {
   const { colors, spacing, radius } = useTheme();
   const t = useT();
+  const lang = useLanguage();
   const router = useRouter();
 
   const user = useAuthStore((s) => s.user);
   const myWorkouts = useWorkoutStore((s) => s.workouts);
+  const workoutsLoaded = useWorkoutStore((s) => s.loaded);
   const active = useWorkoutStore((s) => s.active);
   const unread = useUnreadCount();
 
@@ -66,6 +72,14 @@ export default function HomeScreen() {
       streak: currentStreak(myWorkouts.map((w) => w.date), now),
     };
   }, [myWorkouts]);
+
+  // Muskelgrupper som har ventet lengst — grunnlag for påminnelseskortet.
+  // Egendefinerte øvelser abonneres reaktivt: de kan lastes ETTER øktene.
+  const customExercises = useExerciseStore((s) => s.customExercises);
+  const staleStatuses = useMemo(() => {
+    const resolve = (id: string) => customExercises.find((e) => e.id === id) ?? findExercise(id);
+    return staleMuscles(muscleStatuses(myWorkouts, resolve, new Date()));
+  }, [myWorkouts, customExercises]);
 
   const loadFeed = useCallback(async () => {
     try {
@@ -174,6 +188,17 @@ export default function HomeScreen() {
   const todayRaw = formatFullDate(new Date().toISOString());
   const today = todayRaw.charAt(0).toUpperCase() + todayRaw.slice(1);
 
+  // «Bryst, rygg og skuldre» — lokaliserte muskeletiketter i løpende tekst
+  // Kun første etikett beholder stor forbokstav — {muscles} åpner setningen
+  const staleNames = staleStatuses.map((s, i) => {
+    const label = muscleLabel(s.muscle, lang);
+    return i === 0 ? label : label.charAt(0).toLowerCase() + label.slice(1);
+  });
+  const staleJoined =
+    staleNames.length > 1
+      ? `${staleNames.slice(0, -1).join(', ')} ${t('home.listAnd')} ${staleNames[staleNames.length - 1]}`
+      : (staleNames[0] ?? '');
+
   const header = (
     <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
       {/* Toppseksjon */}
@@ -207,7 +232,13 @@ export default function HomeScreen() {
           )}
         </Pressable>
         <Pressable hitSlop={6} onPress={() => router.push('/(tabs)/profil')}>
-          <Avatar name={user.displayName} color={user.avatarColor} uri={user.avatarUri} size={42} />
+          <Avatar
+            name={user.displayName}
+            color={user.avatarColor}
+            uri={user.avatarUri}
+            icon={user.avatarIcon}
+            size={42}
+          />
         </Pressable>
       </View>
 
@@ -301,6 +332,44 @@ export default function HomeScreen() {
           />
         </View>
       </View>
+
+      {/* Muskelgrupper som har ventet lengst på trening */}
+      {workoutsLoaded && myWorkouts.length > 0 && staleStatuses.length > 0 && (
+        <Animated.View entering={FadeInDown.duration(250)}>
+          <Card
+            onPress={() =>
+              router.push({ pathname: '/(tabs)/statistikk', params: { seksjon: 'muskler' } })
+            }
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: radius.md,
+                  backgroundColor: colors.accentMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="body-outline" size={20} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="bodyBold">{t('home.muscleCardTitle')}</AppText>
+                <AppText variant="caption" color="muted" numberOfLines={2}>
+                  {t(
+                    staleNames.length === 1
+                      ? 'home.muscleCardSubtitleOne'
+                      : 'home.muscleCardSubtitle',
+                    { muscles: staleJoined },
+                  )}
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+          </Card>
+        </Animated.View>
+      )}
 
       <AppText variant="heading">{t('home.latestWorkouts')}</AppText>
 

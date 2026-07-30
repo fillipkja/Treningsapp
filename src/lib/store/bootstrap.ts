@@ -4,6 +4,7 @@ import { useChallengeStore } from './challenges';
 import { useExerciseStore } from './exercises';
 import { useNotificationStore } from './notifications';
 import { useProgramStore } from './programs';
+import { useRecordStore } from './records';
 import { useWorkoutStore } from './workouts';
 
 // Laster alle server-backede stores når brukeren er innlogget og klar.
@@ -21,6 +22,7 @@ function allStores() {
     useExerciseStore,
     useNotificationStore,
     useChallengeStore,
+    useRecordStore,
   ] as const;
 }
 
@@ -42,6 +44,7 @@ function resetStores(): void {
   useExerciseStore.setState({ customExercises: [], loaded: false, loading: false });
   useNotificationStore.setState({ notifications: [], loaded: false, loading: false });
   useChallengeStore.setState({ items: [], loaded: false, loading: false });
+  useRecordStore.setState({ records: [], runs: [], loaded: false, loading: false });
 }
 
 /** Kalles fra (tabs)/_layout: laster alt når auth-status blir 'ready' */

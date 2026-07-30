@@ -61,16 +61,18 @@ src/
 ## Deploy av web-versjonen
 
 ```bash
-npx expo export --platform web   # bygger til dist/
+npm run build:web   # expo export --platform web + node scripts/postexport.mjs
 ```
 
 `dist/` publiseres til GitHub Pages (gh-pages-branch). `experiments.baseUrl` i app.json er satt til `/Treningsapp` for å matche repo-navnet.
 
+`scripts/postexport.mjs` injiserer PWA-tagger i `dist/index.html` (apple-touch-icon, manifest, theme-color — gir ekte app-ikon når appen legges på hjemskjermen), kopierer `index.html` til `404.html` (SPA-fallback) og skriver `.nojekyll`. Ikonene og `manifest.webmanifest` ligger i `public/`, som Expo kopierer inn i `dist/` ved eksport.
+
 ## Backend
 
-Supabase (Postgres + Auth). Hele skjemaet ligger i `supabase/migrations/0001_init.sql`: tabeller, row-level security-policyer, varsel-triggere og RPC-er (`friend_leaderboard`, `challenge_standings`). Varsler kan kun opprettes av databasetriggere — aldri av klienter. Aggregater (volum/sett/PR-er) beregnes av databasen fra settene, så rangeringer kan ikke jukses.
+Supabase (Postgres + Auth + Storage). Skjemaet ligger i `supabase/migrations/` og kjøres i rekkefølge (SQL-editoren eller `supabase db push`): `0001_init.sql` er grunnskjemaet (tabeller, row-level security-policyer, varsel-triggere og RPC-er som `friend_leaderboard` og `challenge_standings`), senere filer bygger på (`0003` legger til avatar-ikon, kjønn i `profile_private`, `manual_records` og storage-bøtta `avatars` for profilbilder). Varsler kan kun opprettes av databasetriggere — aldri av klienter. Aggregater (volum/sett/PR-er) beregnes av databasen fra settene, så rangeringer kan ikke jukses.
 
-Integrasjonstester (16 stk, inkl. angrepsscenarier mot RLS): `SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/integration-test.mjs`
+Integrasjonstester (23 stk, inkl. angrepsscenarier mot RLS): `SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/integration-test.mjs`
 
 Frontend-hemmeligheter: kun `EXPO_PUBLIC_SUPABASE_URL` og `EXPO_PUBLIC_SUPABASE_ANON_KEY` i `.env` — anon-nøkkelen er offentlig per design (RLS beskytter dataene). `service_role`-nøkkelen skal ALDRI i klientkode eller repo.
 

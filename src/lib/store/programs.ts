@@ -11,96 +11,28 @@ import {
   updateProgram as apiUpdateProgram,
   updateTemplate as apiUpdateTemplate,
 } from '@/lib/api/personal';
+import { libraryPrograms, toProgramDraft } from '@/lib/data/program-library';
 import { uid } from '@/lib/ids';
 import { useAuthStore } from './auth';
 import type { Program, ProgramDay, WorkoutTemplate } from '@/types';
 
 /**
  * Startprogrammer så appen ikke er tom ved første åpning (seedes til serveren).
- * Bygges ved seedtidspunkt slik at navn/beskrivelser følger brukerens aktive språk.
+ * Hentes fra programbiblioteket ved seedtidspunkt slik at navn/beskrivelser
+ * følger brukerens aktive språk. Resten av biblioteket legges til manuelt
+ * via /programs/library.
  */
-const starterPrograms = (): Program[] => [
-  {
-    id: 'prog-ppl',
-    name: t('training.starterPplName'),
-    description: t('training.starterPplDesc'),
-    isFavorite: true,
-    createdAt: '2026-01-01T00:00:00Z',
-    days: [
-      {
-        id: 'ppl-push',
-        name: 'Push',
-        exercises: [
-          { exerciseId: 'benkpress', sets: 4, repsMin: 5, repsMax: 8 },
-          { exerciseId: 'skulderpress-stang', sets: 3, repsMin: 8, repsMax: 10 },
-          { exerciseId: 'skrabenk-manualer', sets: 3, repsMin: 8, repsMax: 12 },
-          { exerciseId: 'sidehev', sets: 3, repsMin: 12, repsMax: 15 },
-          { exerciseId: 'triceps-pushdown', sets: 3, repsMin: 10, repsMax: 15 },
-        ],
-      },
-      {
-        id: 'ppl-pull',
-        name: 'Pull',
-        exercises: [
-          { exerciseId: 'markloft', sets: 3, repsMin: 3, repsMax: 5 },
-          { exerciseId: 'pullups', sets: 3, repsMin: 6, repsMax: 10 },
-          { exerciseId: 'roing-stang', sets: 3, repsMin: 8, repsMax: 10 },
-          { exerciseId: 'nedtrekk', sets: 3, repsMin: 10, repsMax: 12 },
-          { exerciseId: 'bicepscurl-stang', sets: 3, repsMin: 10, repsMax: 12 },
-        ],
-      },
-      {
-        id: 'ppl-legs',
-        name: 'Legs',
-        exercises: [
-          { exerciseId: 'kneboy', sets: 4, repsMin: 5, repsMax: 8 },
-          { exerciseId: 'rumensk-markloft', sets: 3, repsMin: 8, repsMax: 10 },
-          { exerciseId: 'beinpress', sets: 3, repsMin: 10, repsMax: 12 },
-          { exerciseId: 'utfall', sets: 3, repsMin: 10, repsMax: 12 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'prog-fullkropp',
-    name: t('training.starterFullBodyName'),
-    description: t('training.starterFullBodyDesc'),
-    isFavorite: false,
-    createdAt: '2026-01-01T00:00:00Z',
-    days: [
-      {
-        id: 'fk-a',
-        name: t('training.starterDayA'),
-        exercises: [
-          { exerciseId: 'kneboy', sets: 3, repsMin: 5, repsMax: 8 },
-          { exerciseId: 'benkpress', sets: 3, repsMin: 5, repsMax: 8 },
-          { exerciseId: 'roing-stang', sets: 3, repsMin: 8, repsMax: 10 },
-          { exerciseId: 'planke', sets: 3, repsMin: 1 },
-        ],
-      },
-      {
-        id: 'fk-b',
-        name: t('training.starterDayB'),
-        exercises: [
-          { exerciseId: 'markloft', sets: 3, repsMin: 3, repsMax: 5 },
-          { exerciseId: 'skulderpress-stang', sets: 3, repsMin: 8, repsMax: 10 },
-          { exerciseId: 'nedtrekk', sets: 3, repsMin: 10, repsMax: 12 },
-          { exerciseId: 'utfall', sets: 3, repsMin: 10, repsMax: 12 },
-        ],
-      },
-      {
-        id: 'fk-c',
-        name: t('training.starterDayC'),
-        exercises: [
-          { exerciseId: 'frontboy', sets: 3, repsMin: 6, repsMax: 8 },
-          { exerciseId: 'dips', sets: 3, repsMin: 8, repsMax: 12 },
-          { exerciseId: 'chins', sets: 3, repsMin: 6, repsMax: 10 },
-          { exerciseId: 'hip-thrust', sets: 3, repsMin: 8, repsMax: 12 },
-        ],
-      },
-    ],
-  },
-];
+const starterPrograms = (): Omit<Program, 'id' | 'createdAt'>[] => {
+  const library = libraryPrograms();
+  const starters: { key: string; isFavorite: boolean }[] = [
+    { key: 'ppl', isFavorite: true },
+    { key: 'fullkropp', isFavorite: false },
+  ];
+  return starters.flatMap(({ key, isFavorite }) => {
+    const entry = library.find((p) => p.key === key);
+    return entry ? [toProgramDraft(entry, isFavorite)] : [];
+  });
+};
 
 const starterTemplates = (): WorkoutTemplate[] => [
   {
@@ -174,9 +106,7 @@ export const useProgramStore = create<ProgramState>()((set, get) => ({
       const alreadySeeded = (await AsyncStorage.getItem(flagKey)) != null;
       if (programs.length === 0 && templates.length === 0 && !alreadySeeded) {
         programs = await Promise.all(
-          starterPrograms().map(({ id: _id, createdAt: _createdAt, ...p }) =>
-            insertProgram(userId, p),
-          ),
+          starterPrograms().map((draft) => insertProgram(userId, draft)),
         );
         templates = await Promise.all(
           starterTemplates().map(({ id: _id, createdAt: _createdAt, ...tmpl }) =>

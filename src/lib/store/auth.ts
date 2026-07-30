@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { norskFeil } from '@/lib/api/errors';
 import { supabase } from '@/lib/supabase';
-import type { TrainingGoal, UserProfile } from '@/types';
+import type { Gender, TrainingGoal, UserProfile } from '@/types';
 
 interface ProfileRow {
   id: string;
@@ -10,6 +10,7 @@ interface ProfileRow {
   display_name: string;
   avatar_color: string;
   avatar_url: string | null;
+  avatar_icon: string | null;
   goal: TrainingGoal | null;
   bio: string | null;
   share_workouts: boolean;
@@ -20,6 +21,7 @@ interface ProfileRow {
 interface ProfilePrivateRow {
   height_cm: number | null;
   weight_kg: number | null;
+  gender: Gender | null;
 }
 
 /**
@@ -34,8 +36,10 @@ export function mapProfile(row: ProfileRow, priv?: ProfilePrivateRow | null): Us
     displayName: row.display_name || row.username,
     avatarColor: row.avatar_color,
     avatarUri: row.avatar_url ?? undefined,
+    avatarIcon: row.avatar_icon ?? undefined,
     heightCm: priv?.height_cm ?? undefined,
     weightKg: priv?.weight_kg ?? undefined,
+    gender: priv?.gender ?? undefined,
     goal: row.goal ?? undefined,
     bio: row.bio ?? undefined,
     shareWorkouts: row.share_workouts,
@@ -52,8 +56,10 @@ export interface ProfilePatch {
   displayName?: string;
   avatarColor?: string;
   avatarUri?: string | null;
+  avatarIcon?: string | null;
   heightCm?: number | null;
   weightKg?: number | null;
+  gender?: Gender | null;
   goal?: TrainingGoal | null;
   bio?: string | null;
   shareWorkouts?: boolean;
@@ -82,6 +88,7 @@ interface AuthState {
     avatarUri?: string;
     heightCm?: number;
     weightKg?: number;
+    gender?: Gender;
     goal?: TrainingGoal;
   }) => Promise<{ error?: string }>;
   updateProfile: (patch: ProfilePatch) => Promise<{ error?: string }>;
@@ -92,7 +99,11 @@ let initialized = false;
 async function loadProfile(userId: string): Promise<UserProfile | null> {
   const [profile, priv] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-    supabase.from('profile_private').select('height_cm, weight_kg').eq('id', userId).maybeSingle(),
+    supabase
+      .from('profile_private')
+      .select('height_cm, weight_kg, gender')
+      .eq('id', userId)
+      .maybeSingle(),
   ]);
   if (profile.error || !profile.data) return null;
   // Kroppsdata er valgfrie: feil/manglende rad skal ikke stoppe innlogging
@@ -184,16 +195,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (error) return { error: norskFeil(error) };
     // Kroppsdata ligger i egen tabell som bare eieren kan lese
     let priv: ProfilePrivateRow | null = null;
-    if (profile.heightCm !== undefined || profile.weightKg !== undefined) {
+    if (
+      profile.heightCm !== undefined ||
+      profile.weightKg !== undefined ||
+      profile.gender !== undefined
+    ) {
       const { data: privData, error: privError } = await supabase
         .from('profile_private')
         .upsert({
           id: session.user.id,
           height_cm: profile.heightCm ?? null,
           weight_kg: profile.weightKg ?? null,
+          gender: profile.gender ?? null,
           updated_at: new Date().toISOString(),
         })
-        .select('height_cm, weight_kg')
+        .select('height_cm, weight_kg, gender')
         .single();
       if (privError) return { error: norskFeil(privError) };
       priv = privData as ProfilePrivateRow;
@@ -212,6 +228,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       row.display_name = patch.displayName.trim().slice(0, DISPLAY_NAME_MAX);
     if (patch.avatarColor !== undefined) row.avatar_color = patch.avatarColor;
     if (patch.avatarUri !== undefined) row.avatar_url = patch.avatarUri ?? null;
+    if (patch.avatarIcon !== undefined) row.avatar_icon = patch.avatarIcon ?? null;
     if (patch.goal !== undefined) row.goal = patch.goal ?? null;
     if (patch.bio !== undefined) row.bio = patch.bio ?? null;
     if (patch.shareWorkouts !== undefined) row.share_workouts = patch.shareWorkouts;
@@ -228,21 +245,27 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       profileRow = data as ProfileRow;
     }
 
-    // Høyde/vekt i egen privat tabell. null nullstiller kolonnen.
+    // Høyde/vekt/kjønn i egen privat tabell. null nullstiller kolonnen.
     let priv: ProfilePrivateRow | null = {
       height_cm: user.heightCm ?? null,
       weight_kg: user.weightKg ?? null,
+      gender: user.gender ?? null,
     };
-    if (patch.heightCm !== undefined || patch.weightKg !== undefined) {
+    if (
+      patch.heightCm !== undefined ||
+      patch.weightKg !== undefined ||
+      patch.gender !== undefined
+    ) {
       const { data, error } = await supabase
         .from('profile_private')
         .upsert({
           id: user.id,
           height_cm: patch.heightCm !== undefined ? patch.heightCm : (user.heightCm ?? null),
           weight_kg: patch.weightKg !== undefined ? patch.weightKg : (user.weightKg ?? null),
+          gender: patch.gender !== undefined ? patch.gender : (user.gender ?? null),
           updated_at: new Date().toISOString(),
         })
-        .select('height_cm, weight_kg')
+        .select('height_cm, weight_kg, gender')
         .single();
       if (error) return { error: norskFeil(error) };
       priv = data as ProfilePrivateRow;
@@ -251,7 +274,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({
       user: profileRow
         ? mapProfile(profileRow, priv)
-        : { ...user, heightCm: priv.height_cm ?? undefined, weightKg: priv.weight_kg ?? undefined },
+        : {
+            ...user,
+            heightCm: priv.height_cm ?? undefined,
+            weightKg: priv.weight_kg ?? undefined,
+            gender: priv.gender ?? undefined,
+          },
     });
     return {};
   },

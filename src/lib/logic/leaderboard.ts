@@ -6,8 +6,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
-import type { LeaderboardEntry, Period, Workout } from '@/types';
-import { statsForWorkouts } from './points';
+import type { Period, Workout } from '@/types';
 
 export function periodInterval(period: Period, now: Date): { start: Date; end: Date } {
   if (period === 'uke') {
@@ -24,26 +23,37 @@ export function workoutsInInterval(
 }
 
 /**
- * Bygg rangering for en gruppe brukere. `workoutsByUser` skal inneholde
- * alle økter per bruker (filtreres på perioden her). Delt førsteplass får samme rank.
+ * Sorter og gi plassering med delt rang ved poenglikhet: neste distinkte
+ * verdi får indeks + 1. Muterer og returnerer samme array.
  */
-export function buildLeaderboard(
-  workoutsByUser: Map<string, Workout[]>,
-  period: Period,
-  now: Date,
-): LeaderboardEntry[] {
-  const interval = periodInterval(period, now);
-  const entries = [...workoutsByUser.entries()].map(([userId, workouts]) => {
-    const stats = statsForWorkouts(workoutsInInterval(workouts, interval));
-    return { userId, points: stats.points, workouts: stats.workouts, volumeKg: stats.volumeKg, prs: stats.prs, rank: 0 };
-  });
-  entries.sort((a, b) => b.points - a.points);
-  let prevPoints = Number.NaN;
+export function assignSharedRanks<T extends { rank: number }>(
+  entries: T[],
+  value: (entry: T) => number,
+  lowerIsBetter = false,
+): T[] {
+  entries.sort((a, b) => (lowerIsBetter ? value(a) - value(b) : value(b) - value(a)));
+  let prevValue = Number.NaN;
   let prevRank = 0;
   entries.forEach((entry, i) => {
-    entry.rank = entry.points === prevPoints ? prevRank : i + 1;
-    prevPoints = entry.points;
+    entry.rank = value(entry) === prevValue ? prevRank : i + 1;
+    prevValue = value(entry);
     prevRank = entry.rank;
   });
   return entries;
 }
+
+export type StrengthSchemeKey = 'single' | 'five' | 'fivebyfive';
+
+/**
+ * Sett-opplegg for styrke-ledertavlen: tyngste enkeltløft, tyngste 5-er og
+ * tyngste 5x5 (fem sett på samme vekt i samme økt). Sendes til RPC-en
+ * strength_leaderboard som min_reps/min_sets.
+ */
+export const STRENGTH_SCHEMES = [
+  { key: 'single', minReps: 1, minSets: 1 },
+  { key: 'five', minReps: 5, minSets: 1 },
+  { key: 'fivebyfive', minReps: 5, minSets: 5 },
+] as const;
+
+/** Standarddistanser for løpe-ledertavlen, i meter (21097 = halvmaraton, 42195 = maraton) */
+export const STANDARD_RUN_DISTANCES = [1000, 3000, 5000, 10000, 21097, 42195] as const;

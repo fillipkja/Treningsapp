@@ -124,6 +124,8 @@ export default function KonkurranserScreen() {
       const profiles = await fetchProfilesByIds(rows.map((r) => r.userId));
       if (requestedPeriod.current !== period) return; // utdatert svar
       setBoard({ period, entries: toBoardEntries(rows), profiles });
+      // Rydd bort feil fra et parallelt, feilet kall med samme periode
+      setBoardError(null);
     } catch (error) {
       if (requestedPeriod.current !== period) return;
       setBoardError(error instanceof Error ? error.message : translate('error.generic'));
@@ -204,6 +206,7 @@ export default function KonkurranserScreen() {
           name={profile?.displayName ?? '?'}
           color={profile?.avatarColor ?? colors.accent}
           uri={profile?.avatarUri}
+          icon={profile?.avatarIcon}
           size={36}
         />
         <View style={{ flex: 1, gap: 1 }}>
@@ -243,6 +246,7 @@ export default function KonkurranserScreen() {
             name={profile?.displayName ?? '?'}
             color={profile?.avatarColor ?? colors.accent}
             uri={profile?.avatarUri}
+            icon={profile?.avatarIcon}
             size={size}
           />
         </View>
@@ -380,6 +384,31 @@ export default function KonkurranserScreen() {
         />
 
         {renderBoard()}
+
+        {/* Inngang til ledertavlene for styrke og løping */}
+        <Card onPress={() => router.push('/leaderboards')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: radius.md,
+                backgroundColor: colors.accentMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="podium-outline" size={22} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="bodyBold">{t('compete.leaderboardsEntryTitle')}</AppText>
+              <AppText variant="caption" color="muted">
+                {t('compete.leaderboardsEntrySubtitle')}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </View>
+        </Card>
       </Animated.View>
 
       {/* Utfordringer */}

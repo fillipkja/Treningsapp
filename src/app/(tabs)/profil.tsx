@@ -16,10 +16,11 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { useLanguage, useT } from '@/i18n';
-import { goalLabel } from '@/i18n/labels';
+import { genderLabel, goalLabel } from '@/i18n/labels';
 import { confirmDialog } from '@/lib/dialogs';
 import { formatNumber } from '@/lib/format';
 import { useAuthStore } from '@/lib/store/auth';
+import { useRecordStore } from '@/lib/store/records';
 import { useWorkoutStore } from '@/lib/store/workouts';
 import { useTheme } from '@/theme';
 
@@ -73,6 +74,8 @@ export default function ProfilScreen() {
   const workouts = useWorkoutStore((s) => s.workouts);
   const earnedBadges = useWorkoutStore((s) => s.earnedBadges);
   const prs = useWorkoutStore((s) => s.prs);
+  const manualRecords = useRecordStore((s) => s.records);
+  const runRecords = useRecordStore((s) => s.runs);
 
   if (!user) return null;
 
@@ -113,7 +116,13 @@ export default function ProfilScreen() {
               marginTop: -48,
             }}
           >
-            <Avatar name={user.displayName || user.username} color={user.avatarColor} uri={user.avatarUri} size={96} />
+            <Avatar
+              name={user.displayName || user.username}
+              color={user.avatarColor}
+              uri={user.avatarUri}
+              icon={user.avatarIcon}
+              size={96}
+            />
             <View style={{ alignItems: 'center', gap: spacing.xs }}>
               <AppText variant="title" numberOfLines={1}>
                 {user.displayName || user.username}
@@ -149,6 +158,7 @@ export default function ProfilScreen() {
             >
               {user.heightCm ? <Chip label={`${formatNumber(user.heightCm)} cm`} icon="resize-outline" /> : null}
               {user.weightKg ? <Chip label={`${formatNumber(user.weightKg, Number.isInteger(user.weightKg) ? 0 : 1)} kg`} icon="scale-outline" /> : null}
+              {user.gender ? <Chip label={genderLabel(user.gender, lang)} icon="person-outline" /> : null}
               {user.goal ? <Chip label={goalLabel(user.goal, lang)} selected /> : null}
             </View>
             <Button
@@ -193,6 +203,22 @@ export default function ProfilScreen() {
               icon="people-outline"
               chevron
               onPress={() => router.push('/friends')}
+            />
+            <Divider />
+            <ListItem
+              title={t('profile.recordsTitle')}
+              subtitle={
+                manualRecords.length + runRecords.length === 0
+                  ? t('profile.recordsSubtitle')
+                  : manualRecords.length + runRecords.length === 1
+                    ? t('profile.recordsOne')
+                    : t('profile.recordsCount', {
+                        count: formatNumber(manualRecords.length + runRecords.length),
+                      })
+              }
+              icon="trophy-outline"
+              chevron
+              onPress={() => router.push('/records')}
             />
             <Divider />
             <ListItem

@@ -1,5 +1,7 @@
 import { View } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { isAvatarIcon } from '@/lib/data/avatar-icons';
 import { useTheme } from '@/theme';
 import { AppText } from './app-text';
 
@@ -7,6 +9,8 @@ interface AvatarProps {
   name: string;
   color: string;
   uri?: string;
+  /** Ionicons-navn som vises i stedet for initialer (ignoreres når uri er satt) */
+  icon?: string;
   size?: number;
 }
 
@@ -17,7 +21,7 @@ function initials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-export function Avatar({ name, color, uri, size = 40 }: AvatarProps) {
+export function Avatar({ name, color, uri, icon, size = 40 }: AvatarProps) {
   const { colors } = useTheme();
 
   if (uri) {
@@ -42,11 +46,15 @@ export function Avatar({ name, color, uri, size = 40 }: AvatarProps) {
         justifyContent: 'center',
       }}
     >
-      <AppText
-        style={{ color: colors.onAccent, fontSize: size * 0.4, fontWeight: '600' }}
-      >
-        {initials(name)}
-      </AppText>
+      {isAvatarIcon(icon) ? (
+        <Ionicons name={icon} size={size * 0.52} color={colors.onAccent} />
+      ) : (
+        <AppText
+          style={{ color: colors.onAccent, fontSize: size * 0.4, fontWeight: '600' }}
+        >
+          {initials(name)}
+        </AppText>
+      )}
     </View>
   );
 }

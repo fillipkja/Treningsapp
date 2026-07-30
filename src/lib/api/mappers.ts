@@ -23,6 +23,7 @@ export interface ProfileRow {
   display_name: string;
   avatar_color: string;
   avatar_url: string | null;
+  avatar_icon: string | null;
   goal: TrainingGoal | null;
   bio: string | null;
   share_workouts: boolean;

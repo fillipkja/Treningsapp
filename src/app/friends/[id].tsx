@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -15,15 +16,19 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { useLanguage, useT } from '@/i18n';
-import { goalLabel } from '@/i18n/labels';
+import { distanceLabel, goalLabel } from '@/i18n/labels';
 import { fetchFriendState, removeFriendship } from '@/lib/api/friends';
+import { fetchSharedRecordsByUser, fetchSharedRunsByUser } from '@/lib/api/personal';
 import { fetchProfilesByIds } from '@/lib/api/profiles';
 import { fetchSharedWorkoutsByUser, setLike } from '@/lib/api/workouts';
+import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
+import { formatDuration, formatKg, formatRecordDate } from '@/lib/format';
 import { firstParam } from '@/lib/params';
 import { useAuthStore } from '@/lib/store/auth';
+import { getExerciseById } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
-import type { UserProfile, Workout, WorkoutComment } from '@/types';
+import type { FriendRecord, FriendRun, UserProfile, Workout, WorkoutComment } from '@/types';
 
 export default function FriendProfileScreen() {
   const id = firstParam(useLocalSearchParams<{ id: string | string[] }>().id);
@@ -36,6 +41,8 @@ export default function FriendProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isFriend, setIsFriend] = useState(false);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [records, setRecords] = useState<FriendRecord[]>([]);
+  const [runs, setRuns] = useState<FriendRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -47,16 +54,20 @@ export default function FriendProfileScreen() {
       if (!myId || !id) return;
       try {
         setError(null);
-        const [profiles, friendState, shared] = await Promise.all([
+        const [profiles, friendState, shared, sharedRecords, sharedRuns] = await Promise.all([
           fetchProfilesByIds([id]),
           fetchFriendState(myId),
-          // RLS gjør at kun vennens delte økter er synlige for meg
+          // RLS gjør at kun vennens delte økter og rekorder er synlige for meg
           fetchSharedWorkoutsByUser(id),
+          fetchSharedRecordsByUser(id),
+          fetchSharedRunsByUser(id),
         ]);
         if (isCancelled()) return;
         setProfile(profiles.get(id) ?? null);
         setIsFriend(friendState.friends.some((f) => f.id === id));
         setWorkouts(shared);
+        setRecords(sharedRecords);
+        setRuns(sharedRuns);
       } catch (e) {
         if (isCancelled()) return;
         setError(e instanceof Error ? e.message : t('error.generic'));
@@ -183,7 +194,13 @@ export default function FriendProfileScreen() {
 
       {/* Profilkort */}
       <Card style={{ alignItems: 'center', gap: spacing.md }}>
-        <Avatar name={name} color={profile.avatarColor} uri={profile.avatarUri} size={96} />
+        <Avatar
+          name={name}
+          color={profile.avatarColor}
+          uri={profile.avatarUri}
+          icon={profile.avatarIcon}
+          size={96}
+        />
         <View style={{ alignItems: 'center', gap: 2 }}>
           <AppText variant="title" numberOfLines={1}>
             {name}
@@ -223,6 +240,94 @@ export default function FriendProfileScreen() {
           ))}
         </View>
       )}
+
+      {/* Personlige rekorder — seksjonen utelates helt når vennen ikke deler noen */}
+      {records.length > 0 || runs.length > 0 ? (
+        <>
+          <AppText variant="heading" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
+            {t('profile.friendRecords')}
+          </AppText>
+          <View style={{ gap: spacing.md }}>
+            {records.map((record) => {
+              const def = getExerciseById(record.exerciseId);
+              return (
+                <Card key={record.id}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        backgroundColor: colors.surfaceElevated,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.gold,
+                      }}
+                    >
+                      <Ionicons name="trophy" size={18} color={colors.gold} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <AppText variant="bodyBold" numberOfLines={1}>
+                        {def ? exerciseDisplayName(def, lang) : t('stats.unknownExercise')}
+                      </AppText>
+                      {record.date ? (
+                        <AppText variant="caption" color="muted" numberOfLines={1}>
+                          {formatRecordDate(record.date)}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <AppText variant="subheading" style={{ color: colors.gold }}>
+                        {formatKg(record.weightKg)}
+                      </AppText>
+                      <AppText variant="caption" color="muted">
+                        {record.sets > 1
+                          ? `${record.sets} × ${record.reps}`
+                          : record.reps === 1
+                            ? t('profile.recordOneRep')
+                            : t('profile.recordReps', { count: record.reps })}
+                      </AppText>
+                    </View>
+                  </View>
+                </Card>
+              );
+            })}
+            {/* Delte løperekorder etter styrkerekordene */}
+            {runs.map((run) => (
+              <Card key={run.id}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      backgroundColor: colors.accentMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="footsteps-outline" size={18} color={colors.accent} />
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <AppText variant="bodyBold" numberOfLines={1}>
+                      {distanceLabel(run.distanceM, lang)}
+                    </AppText>
+                    {run.date ? (
+                      <AppText variant="caption" color="muted" numberOfLines={1}>
+                        {formatRecordDate(run.date)}
+                      </AppText>
+                    ) : null}
+                  </View>
+                  <AppText variant="subheading" style={{ color: colors.accent }}>
+                    {formatDuration(run.durationSec)}
+                  </AppText>
+                </View>
+              </Card>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {/* Fjern venn */}
       <View style={{ marginTop: spacing.xxl }}>

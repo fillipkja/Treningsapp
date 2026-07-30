@@ -347,6 +347,7 @@ export default function NewChallengeScreen() {
                             name={friend.displayName}
                             color={friend.avatarColor}
                             uri={friend.avatarUri}
+                            icon={friend.avatarIcon}
                             size={52}
                           />
                           {selected ? (

@@ -61,6 +61,35 @@ const nb = {
   'training.repsFrom': 'Reps fra',
   'training.repsTo': 'Reps til',
   'training.addExercise': 'Legg til øvelse',
+  // Programbibliotek
+  'training.library': 'Programbibliotek',
+  'training.librarySubtitle': 'Ferdiglagde programmer du kan legge til',
+  'training.libraryIntro':
+    'Velg et ferdiglagd program og legg det til i dine programmer. Du kan tilpasse det etterpå.',
+  'training.libraryAdd': 'Legg til i mine programmer',
+  'training.libraryAdded': 'Lagt til',
+  'training.libraryAddError': 'Kunne ikke legge til programmet',
+  'training.libDayUpper': 'Overkropp',
+  'training.libDayLower': 'Underkropp',
+  'training.libDayArms': 'Armer',
+  'training.libDayLegs': 'Bein',
+  'training.libPplUlName': 'PPL × Upper/Lower',
+  'training.libPplUlDesc':
+    '5-dagers hybrid: Push, Pull og Legs pluss en overkropps- og en underkroppsøkt.',
+  'training.libAntPostName': 'Anterior/Posterior',
+  'training.libAntPostDesc':
+    '4-dagers splitt på kroppens framside og bakside — press og framside ett pass, trekk og bakkjede det neste.',
+  'training.libUpperLowerName': 'Overkropp/Underkropp',
+  'training.libUpperLowerDesc':
+    'Klassisk 4-dagers splitt med to overkropps- og to underkroppsøkter i uka.',
+  'training.libBroName': 'Klassisk 5-splitt',
+  'training.libBroDesc': 'Én muskelgruppe per dag: bryst, rygg, skuldre, armer og bein.',
+  'training.lib5x5Name': 'Styrke 5×5',
+  'training.lib5x5Desc':
+    'Tunge baseløft med 5 sett × 5 reps. Veksle mellom dag A og B, tre økter i uka.',
+  'training.libBodyweightName': 'Hjemme uten utstyr',
+  'training.libBodyweightDesc':
+    'Kroppsvektprogram med tre varierte dager — tren hvor som helst.',
   // Startinnhold (seedes til serveren på brukerens språk)
   'training.starterPplName': 'Push Pull Legs',
   'training.starterPplDesc': 'Klassisk 3-splitt for muskelvekst. Kjør 3–6 økter i uka.',
@@ -130,6 +159,33 @@ const en: Record<keyof typeof nb, string> = {
   'training.repsFrom': 'Reps from',
   'training.repsTo': 'Reps to',
   'training.addExercise': 'Add exercise',
+  'training.library': 'Program library',
+  'training.librarySubtitle': 'Ready-made programs you can add',
+  'training.libraryIntro':
+    'Pick a ready-made program and add it to your programs. You can adjust it afterwards.',
+  'training.libraryAdd': 'Add to my programs',
+  'training.libraryAdded': 'Added',
+  'training.libraryAddError': 'Could not add the program',
+  'training.libDayUpper': 'Upper body',
+  'training.libDayLower': 'Lower body',
+  'training.libDayArms': 'Arms',
+  'training.libDayLegs': 'Legs',
+  'training.libPplUlName': 'PPL × Upper/Lower',
+  'training.libPplUlDesc':
+    '5-day hybrid: push, pull and legs plus one upper- and one lower-body session.',
+  'training.libAntPostName': 'Anterior/Posterior',
+  'training.libAntPostDesc':
+    '4-day split across the front and back of the body — pressing and front side one day, pulling and posterior chain the next.',
+  'training.libUpperLowerName': 'Upper/Lower',
+  'training.libUpperLowerDesc':
+    'Classic 4-day split with two upper- and two lower-body sessions per week.',
+  'training.libBroName': 'Classic 5-day split',
+  'training.libBroDesc': 'One muscle group per day: chest, back, shoulders, arms and legs.',
+  'training.lib5x5Name': 'Strength 5×5',
+  'training.lib5x5Desc':
+    'Heavy compound lifts at 5 sets × 5 reps. Alternate days A and B, three sessions per week.',
+  'training.libBodyweightName': 'Home, no equipment',
+  'training.libBodyweightDesc': 'Bodyweight program with three varied days — train anywhere.',
   'training.starterPplName': 'Push Pull Legs',
   'training.starterPplDesc': 'Classic 3-way split for muscle growth. Do 3–6 sessions per week.',
   'training.starterFullBodyName': 'Full body 3 days',

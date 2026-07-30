@@ -189,6 +189,7 @@ export default function AddFriendScreen() {
             name={result.displayName || result.username}
             color={result.avatarColor}
             uri={result.avatarUri}
+            icon={result.avatarIcon}
             size={72}
           />
           <View style={{ alignItems: 'center', gap: 2 }}>

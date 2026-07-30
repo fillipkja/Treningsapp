@@ -130,6 +130,7 @@ export function CommentSheet({ visible, onClose, workoutId, onCommentAdded }: Co
                   name={author?.displayName ?? '?'}
                   color={author?.avatarColor ?? colors.accent}
                   uri={author?.avatarUri}
+                  icon={author?.avatarIcon}
                   size={32}
                 />
                 <View style={{ flex: 1 }}>

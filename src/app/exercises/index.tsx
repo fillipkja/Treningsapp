@@ -11,7 +11,8 @@ import { AppText, Divider, EmptyState, Input, Screen, ScreenHeader } from '@/com
 import { useLanguage, useT } from '@/i18n';
 import { ALL_MUSCLES, muscleLabel } from '@/i18n/labels';
 import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
-import { useAllExercises } from '@/lib/store/exercises';
+import { confirmDialog, infoDialog } from '@/lib/dialogs';
+import { useAllExercises, useExerciseStore } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
 import type { Exercise, MuscleGroup } from '@/types';
 
@@ -29,6 +30,26 @@ export default function ExerciseLibraryScreen() {
 
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
+  const deleteCustomExercise = useExerciseStore((s) => s.deleteCustomExercise);
+
+  const askDeleteCustom = (exercise: Exercise) => {
+    confirmDialog({
+      title: t('exercises.deleteTitle'),
+      message: t('exercises.deleteMessage', { name: exerciseDisplayName(exercise, lang) }),
+      confirmLabel: t('common.delete'),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteCustomExercise(exercise.id);
+        } catch (error) {
+          infoDialog(
+            t('exercises.deleteErrorTitle'),
+            error instanceof Error && error.message ? error.message : t('error.generic'),
+          );
+        }
+      },
+    });
+  };
 
   const isFiltering = query.trim().length > 0 || muscle !== null;
 
@@ -97,8 +118,18 @@ export default function ExerciseLibraryScreen() {
         renderItem={({ item }) => (
           <ExerciseRow
             exercise={item}
-            chevron
-            onPress={() => router.push(`/exercises/${item.id}`)}
+            // Egne øvelser slettes her — det er ingen egen detaljside
+            right={
+              item.isCustom ? (
+                <Pressable
+                  hitSlop={8}
+                  accessibilityLabel={t('exercises.deleteTitle')}
+                  onPress={() => askDeleteCustom(item)}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                </Pressable>
+              ) : undefined
+            }
           />
         )}
         renderSectionHeader={({ section }) =>

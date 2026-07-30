@@ -11,13 +11,30 @@ import {
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, ProgressBar } from '@/components/ui';
+import { AppText, Button, Input, ProgressBar } from '@/components/ui';
 import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 
 /** Forhåndsvalg for hvile i sekunder */
 const PRESETS = [60, 90, 120, 180] as const;
 const DEFAULT_SECONDS = 90;
+const MAX_SECONDS = 3600;
+
+/** Modulnivå så en løpende timer overlever at øktskjermen minimeres/remountes */
+let persistedTimer: { endsAt: number; duration: number } | null = null;
+let lastChosenSeconds: number = DEFAULT_SECONDS;
+
+/** Glem en løpende timer — kalles når økten fullføres eller forkastes, så den
+ *  ikke fortsetter inn i neste økt */
+export function clearRestTimer(): void {
+  persistedTimer = null;
+}
+
+/** Løpende timer eller null — utløpte (f.eks. mens skjermen var minimert) ryddes bort */
+function activePersistedTimer(): { endsAt: number; duration: number } | null {
+  if (persistedTimer && persistedTimer.endsAt <= Date.now()) persistedTimer = null;
+  return persistedTimer;
+}
 
 export interface RestTimerHandle {
   /** Start nedtelling — kalles f.eks. automatisk når et sett fullføres */
@@ -46,16 +63,32 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
   const t = useT();
 
   const [expanded, setExpanded] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [duration, setDuration] = useState(DEFAULT_SECONDS);
-  const [remaining, setRemaining] = useState(DEFAULT_SECONDS);
-  const endsAtRef = useRef(0);
-  const lastDurationRef = useRef(DEFAULT_SECONDS);
+  // Gjenoppta en timer som fortsatt løper fra før skjermen ble minimert
+  const [running, setRunning] = useState(() => activePersistedTimer() !== null);
+  const [duration, setDuration] = useState(
+    () => activePersistedTimer()?.duration ?? DEFAULT_SECONDS,
+  );
+  const [remaining, setRemaining] = useState(() => {
+    const timer = activePersistedTimer();
+    return timer ? Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000)) : DEFAULT_SECONDS;
+  });
+  const endsAtRef = useRef(activePersistedTimer()?.endsAt ?? 0);
+  const customMinDraft = useRef('');
+  const customSecDraft = useRef('');
+
+  // Feltene er ukontrollerte og remountes tomme — nullstill drafts ved åpning
+  // så Start ikke bruker gamle, usynlige verdier
+  const openPanel = () => {
+    customMinDraft.current = '';
+    customSecDraft.current = '';
+    setExpanded(true);
+  };
 
   const start = useCallback((seconds?: number) => {
-    const secs = seconds ?? lastDurationRef.current;
-    lastDurationRef.current = secs;
+    const secs = seconds ?? lastChosenSeconds;
+    lastChosenSeconds = secs;
     endsAtRef.current = Date.now() + secs * 1000;
+    persistedTimer = { endsAt: endsAtRef.current, duration: secs };
     setDuration(secs);
     setRemaining(secs);
     setRunning(true);
@@ -70,6 +103,7 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
       const left = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
       setRemaining(left);
       if (left <= 0) {
+        persistedTimer = null;
         setRunning(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -78,8 +112,18 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
   }, [running]);
 
   const cancel = () => {
+    persistedTimer = null;
     setRunning(false);
     Haptics.selectionAsync();
+  };
+
+  const startCustom = () => {
+    const min = parseInt(customMinDraft.current, 10) || 0;
+    const sec = parseInt(customSecDraft.current, 10) || 0;
+    const secs = Math.min(MAX_SECONDS, min * 60 + sec);
+    if (secs <= 0) return;
+    Haptics.selectionAsync();
+    start(secs);
   };
 
   const cardStyle = {
@@ -149,9 +193,9 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
                   paddingVertical: spacing.sm,
                   borderRadius: radius.full,
                   borderWidth: 1,
-                  borderColor: secs === lastDurationRef.current ? colors.accent : colors.border,
+                  borderColor: secs === lastChosenSeconds ? colors.accent : colors.border,
                   backgroundColor:
-                    secs === lastDurationRef.current ? colors.accentMuted : 'transparent',
+                    secs === lastChosenSeconds ? colors.accentMuted : 'transparent',
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
@@ -159,14 +203,43 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
                   variant="caption"
                   style={{
                     fontWeight: '600',
-                    color:
-                      secs === lastDurationRef.current ? colors.accent : colors.textPrimary,
+                    color: secs === lastChosenSeconds ? colors.accent : colors.textPrimary,
                   }}
                 >
                   {t('workout.restSeconds', { seconds: secs })}
                 </AppText>
               </Pressable>
             ))}
+          </View>
+          {/* Egendefinert lengde: minutter og sekunder */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <AppText variant="caption" color="secondary" style={{ flex: 1 }}>
+              {t('workout.restCustomLabel')}
+            </AppText>
+            <Input
+              defaultValue=""
+              onChangeText={(text) => {
+                customMinDraft.current = text;
+              }}
+              keyboardType="number-pad"
+              placeholder={t('workout.restMinPlaceholder')}
+              maxLength={2}
+              style={{ width: 56, paddingVertical: 6, textAlign: 'center', fontSize: 14 }}
+            />
+            <AppText variant="caption" color="muted">
+              :
+            </AppText>
+            <Input
+              defaultValue=""
+              onChangeText={(text) => {
+                customSecDraft.current = text;
+              }}
+              keyboardType="number-pad"
+              placeholder={t('workout.restSecPlaceholder')}
+              maxLength={2}
+              style={{ width: 56, paddingVertical: 6, textAlign: 'center', fontSize: 14 }}
+            />
+            <Button title={t('workout.restStart')} size="sm" variant="secondary" onPress={startCustom} />
           </View>
           <Pressable
             onPress={() => {
@@ -187,7 +260,7 @@ export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(function Re
         </Animated.View>
       ) : (
         <Pressable
-          onPress={() => setExpanded(true)}
+          onPress={openPanel}
           style={({ pressed }) => [
             cardStyle,
             {

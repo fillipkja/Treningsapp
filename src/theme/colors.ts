@@ -26,6 +26,8 @@ export interface ThemeColors {
   danger: string;
   /** Gull til rekorder og topplasseringer */
   gold: string;
+  /** Lilla til statusmarkering (f.eks. muskelgrupper som aldri er trent) */
+  purple: string;
   /** Gradienter til hero-kort (aktiv økt, feiring, pall) */
   gradientAccent: readonly [string, string];
   gradientSuccess: readonly [string, string];
@@ -58,6 +60,7 @@ export const darkColors: ThemeColors = {
   warning: '#fab219',
   danger: '#e66767',
   gold: '#e3b341',
+  purple: '#a678e8',
   gradientAccent: ['#3987e5', '#6b5ce8'],
   gradientSuccess: ['#12b76a', '#0a7f4f'],
   gradientGold: ['#e3b341', '#c47f1d'],
@@ -86,6 +89,7 @@ export const lightColors: ThemeColors = {
   warning: '#c98500',
   danger: '#d03b3b',
   gold: '#a87616',
+  purple: '#7635cf',
   gradientAccent: ['#2a78d6', '#5747d1'],
   gradientSuccess: ['#0e9c58', '#086b3f'],
   gradientGold: ['#c9952c', '#a3690f'],
@@ -111,7 +115,7 @@ export const heatmapRamp = {
   light: ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#2a78d6'],
 } as const;
 
-/** Fallback-farger for initial-avatarer */
+/** Fallback-farger for initial-/ikonavatarer */
 export const avatarColors = [
   '#3987e5',
   '#199e70',
@@ -119,6 +123,12 @@ export const avatarColors = [
   '#9085e9',
   '#d55181',
   '#c98500',
+  '#2a9d9f',
+  '#c94f4f',
+  '#5b8c2a',
+  '#7a6ff0',
+  '#b0653a',
+  '#6d7885',
 ] as const;
 
 /** Identitetsfarger per muskelgruppe — brukes på øvelsesfliser, chips og filtre.

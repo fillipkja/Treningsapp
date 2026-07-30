@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/lib/store/auth';
 import { useBootstrapData } from '@/lib/store/bootstrap';
@@ -10,6 +11,7 @@ export default function TabLayout() {
   const theme = useTheme();
   const t = useT();
   const status = useAuthStore((s) => s.status);
+  const insets = useSafeAreaInsets();
   useBootstrapData();
 
   if (status === 'loading') return null;
@@ -26,6 +28,11 @@ export default function TabLayout() {
           backgroundColor: theme.colors.chrome,
           borderTopColor: theme.colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
+          // Web: standardhøyden 49 gir null slingringsmonn for etikettene, og
+          // nettleserens linjebokser er høyere enn native — underlengdene («g»,
+          // «j») kappes. Eksplisitt høyde hopper over getTabBarHeight sin
+          // inset-håndtering, så insets.bottom må legges til her selv.
+          ...(Platform.OS === 'web' ? { height: 56 + insets.bottom } : null),
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}>

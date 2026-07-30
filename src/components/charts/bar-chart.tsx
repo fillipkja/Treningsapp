@@ -1,6 +1,5 @@
-import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Line, Path, Text as SvgText } from 'react-native-svg';
 
 import { useTheme } from '@/theme';
@@ -50,10 +49,8 @@ export function BarChart({
   yFormatter = formatValue,
   highlightIndex,
 }: BarChartProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors } = useTheme();
   const [width, setWidth] = useState(0);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [tooltipWidth, setTooltipWidth] = useState(96);
 
   const barColor = color ?? colors.accent;
   const n = data.length;
@@ -75,166 +72,110 @@ export function BarChart({
     PAD_TOP + plotH - ((v - scale.min) / Math.max(scale.max - scale.min, 1e-9)) * plotH;
   const barCenter = (i: number) => plotX + i * bandW + bandW / 2;
 
-  const maxIndex = useMemo(() => {
-    let idx = -1;
-    let best = -Infinity;
-    data.forEach((d, i) => {
-      if (d.value > best) {
-        best = d.value;
-        idx = i;
+  // Selektive x-etiketter: grådig venstre-til-høyre per faktisk etikettbredde
+  // (én bred etikett straffer ikke de smale); siste vises alltid og vinner plass.
+  const labeledIndices = useMemo(() => {
+    const set = new Set<number>();
+    if (n === 0 || bandW <= 0) return set;
+    const half = (i: number) => estimateTextWidth(data[i].label, 11) / 2;
+    let lastKept = -1;
+    for (let i = 0; i < n; i++) {
+      if (lastKept < 0 || (i - lastKept) * bandW >= half(lastKept) + half(i) + 8) {
+        set.add(i);
+        lastKept = i;
       }
-    });
-    return idx;
-  }, [data]);
-
-  // Selektive x-etiketter når båndene blir for smale.
-  const labelStep = bandW >= 28 ? 1 : Math.max(1, Math.ceil(28 / Math.max(bandW, 1)));
+    }
+    if (!set.has(n - 1)) {
+      for (const i of [...set]) {
+        if ((n - 1 - i) * bandW < half(i) + half(n - 1) + 8) set.delete(i);
+      }
+      set.add(n - 1);
+    }
+    return set;
+  }, [data, n, bandW]);
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
-
-  const onBarPress = (i: number) => {
-    setActiveIndex((prev) => (prev === i ? null : i));
-    Haptics.selectionAsync().catch(() => {});
-  };
-
-  const active = activeIndex != null ? data[activeIndex] : null;
-  const tooltipLeft =
-    activeIndex == null
-      ? 0
-      : clamp(barCenter(activeIndex) - tooltipWidth / 2, 0, Math.max(0, width - tooltipWidth));
 
   return (
     <View onLayout={onLayout} style={{ height }}>
       {width > 0 && plotW > 0 && n > 0 ? (
-        <>
-          <Svg width={width} height={height}>
-            {/* Gridlinjer + y-ticks (baseline er egen hårlinje) */}
-            {scale.ticks.map((tick) =>
-              tick === 0 ? null : (
-                <Line
-                  key={`grid-${tick}`}
-                  x1={plotX}
-                  y1={yFor(tick)}
-                  x2={width - PAD_RIGHT}
-                  y2={yFor(tick)}
-                  stroke={colors.gridline}
-                  strokeWidth={1}
-                />
-              ),
-            )}
-            <Line x1={plotX} y1={baselineY} x2={width - PAD_RIGHT} y2={baselineY} stroke={colors.gridline} strokeWidth={1} />
-            {scale.ticks.map((tick) => (
-              <SvgText
-                key={`ytick-${tick}`}
-                x={gutter - 6}
-                y={yFor(tick) + 4}
-                fontSize={11}
-                fill={colors.textMuted}
-                textAnchor="end"
-              >
-                {yFormatter(tick)}
-              </SvgText>
-            ))}
+        <Svg width={width} height={height}>
+          {/* Gridlinjer + y-ticks (baseline er egen hårlinje) */}
+          {scale.ticks.map((tick) =>
+            tick === 0 ? null : (
+              <Line
+                key={`grid-${tick}`}
+                x1={plotX}
+                y1={yFor(tick)}
+                x2={width - PAD_RIGHT}
+                y2={yFor(tick)}
+                stroke={colors.gridline}
+                strokeWidth={1}
+              />
+            ),
+          )}
+          <Line x1={plotX} y1={baselineY} x2={width - PAD_RIGHT} y2={baselineY} stroke={colors.gridline} strokeWidth={1} />
+          {scale.ticks.map((tick) => (
+            <SvgText
+              key={`ytick-${tick}`}
+              x={gutter - 6}
+              y={yFor(tick) + 4}
+              fontSize={11}
+              fill={colors.textMuted}
+              textAnchor="end"
+            >
+              {yFormatter(tick)}
+            </SvgText>
+          ))}
 
-            {/* Stolper */}
-            {data.map((d, i) => {
-              const top = yFor(Math.max(0, d.value));
-              if (baselineY - top < 0.5) return null;
-              const dimmed = highlightIndex != null && i !== highlightIndex && i !== activeIndex;
-              return (
-                <Path
-                  key={`bar-${i}`}
-                  d={barPath(barCenter(i) - barW / 2, top, barW, baselineY)}
-                  fill={dimmed ? withAlpha(barColor, 0.45) : barColor}
-                />
-              );
-            })}
+          {/* Stolper */}
+          {data.map((d, i) => {
+            const top = yFor(Math.max(0, d.value));
+            if (baselineY - top < 0.5) return null;
+            const dimmed = highlightIndex != null && i !== highlightIndex;
+            return (
+              <Path
+                key={`bar-${i}`}
+                d={barPath(barCenter(i) - barW / 2, top, barW, baselineY)}
+                fill={dimmed ? withAlpha(barColor, 0.45) : barColor}
+              />
+            );
+          })}
 
-            {/* Verdi-label kun på maks-stolpen */}
-            {maxIndex >= 0 && data[maxIndex].value > 0 && activeIndex == null && (
+          {/* Verdi-label over hver stolpe med verdi (null-uker holdes rene) */}
+          {data.map((d, i) =>
+            d.value > 0 ? (
               <SvgText
-                x={clamp(barCenter(maxIndex), plotX + 12, width - 12)}
-                y={Math.max(yFor(data[maxIndex].value) - 6, 11)}
+                key={`val-${i}`}
+                x={clamp(barCenter(i), plotX + 12, width - 12)}
+                y={Math.max(yFor(d.value) - 6, 11)}
                 fontSize={11}
                 fontWeight="600"
                 fill={colors.textSecondary}
                 textAnchor="middle"
               >
-                {yFormatter(data[maxIndex].value)}
+                {yFormatter(d.value)}
               </SvgText>
-            )}
-
-            {/* X-etiketter */}
-            {data.map((d, i) =>
-              i % labelStep === 0 || i === n - 1 ? (
-                <SvgText
-                  key={`xtick-${i}`}
-                  x={barCenter(i)}
-                  y={baselineY + 15}
-                  fontSize={11}
-                  fill={colors.textMuted}
-                  textAnchor="middle"
-                >
-                  {d.label}
-                </SvgText>
-              ) : null,
-            )}
-          </Svg>
-
-          {/* Trykkflater per bånd (bredere enn stolpen) */}
-          {data.map((_, i) => (
-            <Pressable
-              key={`hit-${i}`}
-              onPress={() => onBarPress(i)}
-              style={{
-                position: 'absolute',
-                left: plotX + i * bandW,
-                top: 0,
-                width: bandW,
-                height: baselineY,
-              }}
-            />
-          ))}
-
-          {/* Tooltip */}
-          {active != null && (
-            <View
-              pointerEvents="none"
-              onLayout={(e) => setTooltipWidth(e.nativeEvent.layout.width)}
-              style={[
-                styles.tooltip,
-                {
-                  left: tooltipLeft,
-                  backgroundColor: colors.surfaceElevated,
-                  borderColor: colors.border,
-                  borderRadius: radius.md,
-                  paddingVertical: spacing.sm - 2,
-                  paddingHorizontal: spacing.sm + 2,
-                },
-              ]}
-            >
-              <Text style={[styles.tooltipTitle, { color: colors.textMuted }]}>{active.label}</Text>
-              <Text style={[styles.tooltipValue, { color: colors.textPrimary }]}>{yFormatter(active.value)}</Text>
-            </View>
+            ) : null,
           )}
-        </>
+
+          {/* X-etiketter (selektive) */}
+          {data.map((d, i) =>
+            labeledIndices.has(i) ? (
+              <SvgText
+                key={`xtick-${i}`}
+                x={barCenter(i)}
+                y={baselineY + 15}
+                fontSize={11}
+                fill={colors.textMuted}
+                textAnchor="middle"
+              >
+                {d.label}
+              </SvgText>
+            ) : null,
+          )}
+        </Svg>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  tooltip: {
-    position: 'absolute',
-    top: 0,
-    borderWidth: 1,
-  },
-  tooltipTitle: {
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  tooltipValue: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

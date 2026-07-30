@@ -17,12 +17,12 @@ import {
 } from 'date-fns';
 import { enUS, nb as nbLocale } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { BarChart, CalendarHeatmap, LineChart, StatTile } from '@/components/charts';
+import { BarChart, CalendarHeatmap, LineChart, StatTile, YearCalendar } from '@/components/charts';
 import {
   AppText,
   Button,
@@ -36,6 +36,7 @@ import {
   SegmentedControl,
 } from '@/components/ui';
 import { useLanguage, useT } from '@/i18n';
+import { muscleLabel } from '@/i18n/labels';
 import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { findExercise } from '@/lib/data/exercises';
 import {
@@ -47,11 +48,12 @@ import {
   formatShortDate,
   formatVolume,
 } from '@/lib/format';
+import { muscleStatuses } from '@/lib/logic/muscles';
 import { currentStreak } from '@/lib/logic/streaks';
 import { volumeByDate } from '@/lib/logic/workout-math';
 import { useExerciseStore } from '@/lib/store/exercises';
 import { useWorkoutStore } from '@/lib/store/workouts';
-import { useTheme } from '@/theme';
+import { muscleColors, useTheme } from '@/theme';
 import type { Workout } from '@/types';
 
 type Resolution = 'uker' | 'mnd';
@@ -91,7 +93,7 @@ const HEATMAP_DAY_LABELS = {
 } as const;
 
 export default function StatistikkScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing, radius, isDark } = useTheme();
   const t = useT();
   const lang = useLanguage();
   const dateLocale = lang === 'en' ? enUS : nbLocale;
@@ -123,8 +125,27 @@ export default function StatistikkScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, loading]);
 
+  // Ankerscroll: Hjem-kortet åpner taben med ?seksjon=muskler
+  const { seksjon } = useLocalSearchParams<{ seksjon?: string }>();
+  const scrollRef = useRef<ScrollView | null>(null);
+  const muscleSectionY = useRef<number | null>(null);
+  useEffect(() => {
+    if (seksjon !== 'muskler' || !loaded) return;
+    // Layout kan lande etter fokus — utsett ett tick så y-posisjonen finnes
+    const timer = setTimeout(() => {
+      if (muscleSectionY.current != null) {
+        scrollRef.current?.scrollTo({ y: muscleSectionY.current, animated: true });
+      }
+      router.setParams({ seksjon: undefined });
+    }, 350);
+    return () => clearTimeout(timer);
+    // router er stabil fra expo-router
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seksjon, loaded]);
+
   const [resolution, setResolution] = useState<Resolution>('uker');
   const [heatMonth, setHeatMonth] = useState(() => startOfMonth(new Date()));
+  const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [selectedPrId, setSelectedPrId] = useState<string | null>(null);
 
   const exerciseName = (id: string): string => {
@@ -184,11 +205,27 @@ export default function StatistikkScreen() {
       const key = dateKey(startOfWeek(parseISO(w.date), WEEK_OPTS));
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return weeks.map((ws) => ({
-      label: t('stats.weekLabel', { num: getISOWeek(ws) }),
+    // Kun første etikett bærer «Uke»-prefikset — resten er bare ukenummer
+    return weeks.map((ws, i) => ({
+      label: i === 0 ? t('stats.weekLabel', { num: getISOWeek(ws) }) : String(getISOWeek(ws)),
       value: counts.get(dateKey(ws)) ?? 0,
     }));
   }, [workouts, t]);
+
+  // --- Muskelstatus: dager siden hver muskelgruppe sist ble trent, eldst først.
+  // Egendefinerte øvelser fra abonnementet — de kan lastes ETTER øktene. ---
+  const muscleRows = useMemo(() => {
+    const resolve = (id: string) => customExercises.find((e) => e.id === id) ?? findExercise(id);
+    return muscleStatuses(workouts, resolve, new Date());
+  }, [workouts, customExercises]);
+
+  /** Fargekode for restitusjon: aldri trent lilla, ≤ 1 d rød, 2 d gul, ≥ 3 d grønn */
+  const staleColor = (daysSince: number | null): string => {
+    if (daysSince == null) return colors.purple;
+    if (daysSince <= 1) return colors.danger;
+    if (daysSince === 2) return colors.warning;
+    return colors.success;
+  };
 
   // --- Aktivitetskalender: intensitet 1–4 relativt til egen beste dag ---
   const dayVolumes = useMemo(() => volumeByDate(workouts), [workouts]);
@@ -219,6 +256,37 @@ export default function StatistikkScreen() {
     setHeatMonth((m) => (direction === -1 ? subMonths(m, 1) : addMonths(m, 1)));
   };
 
+  // --- Årskalender: hele året med treningsdager markert ---
+  const currentYear = new Date().getFullYear();
+  const firstWorkoutYear = useMemo(
+    () =>
+      workouts.reduce(
+        (min, w) => Math.min(min, parseISO(w.date).getFullYear()),
+        currentYear,
+      ),
+    [workouts, currentYear],
+  );
+
+  const trainedDaysInYear = useMemo(() => {
+    const prefix = `${calYear}-`;
+    let count = 0;
+    for (const key of dayVolumes.keys()) if (key.startsWith(prefix)) count += 1;
+    return count;
+  }, [dayVolumes, calYear]);
+
+  const yearMonthLabels = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, m) =>
+        capitalize(format(new Date(2024, m, 1), 'MMM', { locale: dateLocale })),
+      ),
+    [dateLocale],
+  );
+
+  const shiftYear = (direction: -1 | 1) => {
+    Haptics.selectionAsync().catch(() => {});
+    setCalYear((y) => y + direction);
+  };
+
   const onHeatmapDayPress = (key: string) => {
     const dayWorkouts = workoutsByDay.get(key);
     if (dayWorkouts && dayWorkouts.length > 0) {
@@ -239,10 +307,9 @@ export default function StatistikkScreen() {
 
   const strengthPoints = useMemo(() => {
     if (!selectedPr) return [];
-    return selectedPr.history.map((h) => ({ x: formatShortDate(h.date), y: h.est1RM }));
-    // lang: formatShortDate leser språket ikke-reaktivt — recompute ved språkbytte
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPr, lang]);
+    // ISO-dato som nøkkel — to rekorddager kan dele visningsetikett uten å kollapse
+    return selectedPr.history.map((h) => ({ x: h.date, y: h.weightKg }));
+  }, [selectedPr]);
 
   const selectPrExercise = (exerciseId: string) => {
     Haptics.selectionAsync().catch(() => {});
@@ -266,9 +333,9 @@ export default function StatistikkScreen() {
       }));
   }, [workouts, prs]);
 
-  // --- Personlige rekorder sortert på beste est. 1RM ---
+  // --- Personlige rekorder sortert på beste vekt ---
   const sortedPrs = useMemo(
-    () => [...prs].sort((a, b) => b.bestEst1RM - a.bestEst1RM),
+    () => [...prs].sort((a, b) => b.bestWeightKg - a.bestWeightKg),
     [prs],
   );
 
@@ -311,7 +378,7 @@ export default function StatistikkScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll scrollRef={scrollRef}>
       <ScreenHeader title={t('stats.title')} hideBack />
 
       {/* Totaler i 2x2-grid */}
@@ -383,7 +450,46 @@ export default function StatistikkScreen() {
         </Card>
       </Section>
 
-      <Section title={t('stats.activityCalendar')} delay={180}>
+      <View onLayout={(e) => (muscleSectionY.current = e.nativeEvent.layout.y)}>
+      <Section title={t('stats.muscleSection')} delay={180}>
+        <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
+          {muscleRows.map((row, index) => (
+            <View key={row.muscle}>
+              {index > 0 && <Divider />}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  paddingVertical: spacing.md,
+                }}
+              >
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: radius.full,
+                    backgroundColor: muscleColors[isDark ? 'dark' : 'light'][row.muscle],
+                  }}
+                />
+                <AppText variant="body" style={{ flex: 1 }} numberOfLines={1}>
+                  {muscleLabel(row.muscle, lang)}
+                </AppText>
+                <AppText variant="caption" style={{ color: staleColor(row.daysSince) }}>
+                  {row.daysSince == null
+                    ? t('stats.muscleNever')
+                    : row.daysSince === 0
+                      ? t('stats.muscleToday')
+                      : t('stats.muscleDaysAgo', { days: row.daysSince })}
+                </AppText>
+              </View>
+            </View>
+          ))}
+        </Card>
+      </Section>
+      </View>
+
+      <Section title={t('stats.activityCalendar')} delay={240}>
         <Card>
           <View
             style={{
@@ -437,7 +543,66 @@ export default function StatistikkScreen() {
         </Card>
       </Section>
 
-      <Section title={t('stats.strengthSection')} delay={240}>
+      <Section title={t('stats.yearCalendar')} delay={300}>
+        <Card>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: spacing.md,
+            }}
+          >
+            <Pressable
+              hitSlop={8}
+              disabled={calYear <= firstWorkoutYear}
+              onPress={() => shiftYear(-1)}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: radius.full,
+                backgroundColor: colors.surfaceElevated,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: calYear <= firstWorkoutYear ? 0.35 : pressed ? 0.7 : 1,
+              })}
+            >
+              <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
+            </Pressable>
+            <AppText variant="bodyBold">{String(calYear)}</AppText>
+            <Pressable
+              hitSlop={8}
+              disabled={calYear >= currentYear}
+              onPress={() => shiftYear(1)}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: radius.full,
+                backgroundColor: colors.surfaceElevated,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: calYear >= currentYear ? 0.35 : pressed ? 0.7 : 1,
+              })}
+            >
+              <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+          <YearCalendar
+            year={calYear}
+            values={heatValues}
+            monthLabels={yearMonthLabels}
+            dayLabels={[...HEATMAP_DAY_LABELS[lang]]}
+            onDayPress={onHeatmapDayPress}
+          />
+          <AppText variant="caption" color="muted" style={{ marginTop: spacing.md }}>
+            {trainedDaysInYear === 1
+              ? t('stats.trainedDayOne', { year: calYear })
+              : t('stats.trainedDaysMany', { count: trainedDaysInYear, year: calYear })}
+          </AppText>
+        </Card>
+      </Section>
+
+      <Section title={t('stats.strengthSection')} delay={360}>
         {prExercises.length === 0 || !selectedPr ? (
           <Card>
             <EmptyState
@@ -464,8 +629,9 @@ export default function StatistikkScreen() {
             </ScrollView>
             <Card>
               <LineChart
-                series={[{ label: t('stats.est1RM'), points: strengthPoints }]}
+                series={[{ label: t('stats.weightSeries'), points: strengthPoints }]}
                 yFormatter={(v) => formatKg(v)}
+                xLabelFormatter={(x) => formatShortDate(x)}
                 showDots
               />
               <View style={{ marginTop: spacing.md }}>
@@ -473,7 +639,6 @@ export default function StatistikkScreen() {
                   {t('stats.bestLift', {
                     weight: formatKg(selectedPr.bestWeightKg),
                     reps: selectedPr.bestReps,
-                    oneRm: formatKg(selectedPr.bestEst1RM),
                   })}
                 </AppText>
               </View>
@@ -482,7 +647,7 @@ export default function StatistikkScreen() {
         )}
       </Section>
 
-      <Section title={t('stats.favoritesSection')} delay={300}>
+      <Section title={t('stats.favoritesSection')} delay={420}>
         <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
           {favorites.map((fav, index) => (
             <View key={fav.exerciseId}>
@@ -534,31 +699,28 @@ export default function StatistikkScreen() {
         </Card>
       </Section>
 
-      {sortedPrs.length > 0 && (
-        <Section title={t('stats.prSection')} delay={360}>
-          <Card padded={false} style={{ paddingHorizontal: spacing.md }}>
-            {sortedPrs.map((pr, index) => (
-              <View key={pr.exerciseId}>
-                {index > 0 && <Divider />}
-                <ListItem
-                  title={exerciseName(pr.exerciseId)}
-                  subtitle={t('stats.updatedAt', { date: formatRelativeDate(pr.updatedAt) })}
-                  right={
-                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                      <AppText variant="bodyBold">{formatKg(pr.bestWeightKg)}</AppText>
-                      <AppText variant="caption" color="muted">
-                        {t('stats.est1RMValue', { value: formatKg(pr.bestEst1RM) })}
-                      </AppText>
-                    </View>
-                  }
-                  chevron
-                  onPress={() => router.push(`/exercises/${pr.exerciseId}`)}
-                />
-              </View>
-            ))}
-          </Card>
-        </Section>
-      )}
+      <Section title={t('stats.prSection')} delay={480}>
+        <Card padded={false} style={{ paddingHorizontal: spacing.md }}>
+          {/* Alltid synlig inngang til egne rekorder — også uten automatiske PR-er */}
+          <ListItem
+            title={t('profile.recordsTitle')}
+            subtitle={t('stats.myRecordsSubtitle')}
+            icon="trophy-outline"
+            chevron
+            onPress={() => router.push('/records')}
+          />
+          {sortedPrs.map((pr) => (
+            <View key={pr.exerciseId}>
+              <Divider />
+              <ListItem
+                title={exerciseName(pr.exerciseId)}
+                subtitle={t('stats.updatedAt', { date: formatRelativeDate(pr.updatedAt) })}
+                right={<AppText variant="bodyBold">{formatKg(pr.bestWeightKg)}</AppText>}
+              />
+            </View>
+          ))}
+        </Card>
+      </Section>
     </Screen>
   );
 }

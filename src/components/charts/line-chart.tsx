@@ -29,6 +29,11 @@ export interface LineChartProps {
   areaFill?: boolean;
   /** Punkt på hver måling — endepunktet vises alltid */
   showDots?: boolean;
+  /**
+   * Visningsformat for x-verdier (akse + tooltip). Lar punkter ha unike
+   * nøkler (f.eks. ISO-dato) selv når to målinger deler visningsetikett.
+   */
+  xLabelFormatter?: (x: string) => string;
 }
 
 const PAD_TOP = 18;
@@ -41,6 +46,7 @@ export function LineChart({
   yFormatter = formatValue,
   areaFill,
   showDots = false,
+  xLabelFormatter = (x) => x,
 }: LineChartProps) {
   const { colors, isDark, spacing, radius } = useTheme();
   const [width, setWidth] = useState(0);
@@ -91,16 +97,22 @@ export function LineChart({
   const labeledIndices = useMemo(() => {
     const set = new Set<number>();
     if (n === 0 || plotW <= 0) return set;
-    const maxLabels = Math.max(2, Math.floor(plotW / 56));
+    const labelW = (i: number) => estimateTextWidth(xLabelFormatter(categories[i] ?? ''), 11);
+    const maxLabelW = Math.max(...categories.map((_, i) => labelW(i)));
+    const maxLabels = Math.max(2, Math.floor(plotW / Math.max(56, maxLabelW + 16)));
     const step = Math.ceil(n / maxLabels);
     for (let i = 0; i < n; i += step) set.add(i);
     const lastMultiple = Math.floor((n - 1) / step) * step;
     if (!set.has(n - 1)) {
-      if (n - 1 - lastMultiple < step * 0.6) set.delete(lastMultiple);
+      // Siste etikett er end-forankret (hele bredden mot venstre), naboen
+      // midtstilt — pikselsjekk i stedet for indeksavstand.
+      const pxPerIndex = n <= 1 ? 0 : plotW / (n - 1);
+      const needed = labelW(lastMultiple) / 2 + labelW(n - 1) + 8;
+      if ((n - 1 - lastMultiple) * pxPerIndex < needed) set.delete(lastMultiple);
       set.add(n - 1);
     }
     return set;
-  }, [n, plotW]);
+  }, [categories, n, plotW, xLabelFormatter]);
 
   const panResponder = useMemo(() => {
     const updateIndex = (locationX: number) => {
@@ -195,7 +207,7 @@ export function LineChart({
                   fill={colors.textMuted}
                   textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}
                 >
-                  {cat}
+                  {xLabelFormatter(cat)}
                 </SvgText>
               ) : null,
             )}
@@ -331,7 +343,7 @@ export function LineChart({
                 },
               ]}
             >
-              <Text style={[styles.tooltipTitle, { color: colors.textMuted }]}>{categories[activeIndex]}</Text>
+              <Text style={[styles.tooltipTitle, { color: colors.textMuted }]}>{xLabelFormatter(categories[activeIndex])}</Text>
               {activeRows.map((row) => (
                 <View key={row.label} style={[styles.tooltipRow, { columnGap: spacing.xs + 2 }]}>
                   {activeRows.length > 1 && <View style={[styles.tooltipDot, { backgroundColor: row.color }]} />}

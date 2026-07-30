@@ -11,14 +11,15 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExercisePickerSheet } from '@/components/exercises/exercise-picker-sheet';
-import { RestTimer, type RestTimerHandle } from '@/components/workout/rest-timer';
+import { clearRestTimer, RestTimer, type RestTimerHandle } from '@/components/workout/rest-timer';
 import { AppText, Button, Card, Input, Screen, Sheet } from '@/components/ui';
 import { useLanguage, useT } from '@/i18n';
 import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
 import { findExercise } from '@/lib/data/exercises';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
-import { formatDuration, formatKg, formatVolume } from '@/lib/format';
+import { formatKg, formatMinutes, formatVolume } from '@/lib/format';
 import { completedSetCount, workoutVolume } from '@/lib/logic/workout-math';
 import { useAuthStore } from '@/lib/store/auth';
 import { useExerciseStore } from '@/lib/store/exercises';
@@ -30,7 +31,7 @@ import type { Exercise, WorkoutExercise, WorkoutSet } from '@/types';
 const COL = { set: 30, kg: 56, reps: 46, rpe: 38, check: 28, remove: 20 } as const;
 const ROW_GAP = 4;
 
-const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const;
+const RPE_VALUES = [1, 2, 3, 4, 5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10] as const;
 
 function formatRpe(rpe: number): string {
   return String(rpe).replace('.', ',');
@@ -76,13 +77,14 @@ function LiveTimer({ startedAt }: { startedAt: string }) {
 interface SetRowProps {
   weId: string;
   set: WorkoutSet;
-  index: number;
+  /** Arbeidssettnummer (1-basert) — null for oppvarming/dropsett */
+  number: number | null;
   prev?: WorkoutSet;
   onOpenRpe: (weId: string, set: WorkoutSet) => void;
   onToggleCompleted: (weId: string, set: WorkoutSet) => void;
 }
 
-function SetRow({ weId, set, index, prev, onOpenRpe, onToggleCompleted }: SetRowProps) {
+function SetRow({ weId, set, number, prev, onOpenRpe, onToggleCompleted }: SetRowProps) {
   const { colors, radius, spacing } = useTheme();
   const t = useT();
   const updateSet = useWorkoutStore((s) => s.updateSet);
@@ -96,6 +98,16 @@ function SetRow({ weId, set, index, prev, onOpenRpe, onToggleCompleted }: SetRow
     borderRadius: radius.sm,
   };
 
+  // Vanlig → oppvarming → dropsett → vanlig
+  const cycleSetType = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (set.isWarmup) updateSet(weId, set.id, { isWarmup: false, isDropset: true });
+    else if (set.isDropset) updateSet(weId, set.id, { isDropset: false });
+    else updateSet(weId, set.id, { isWarmup: true });
+  };
+
+  const markColor = set.isWarmup ? colors.warning : colors.accent;
+
   return (
     <View
       style={{
@@ -108,33 +120,26 @@ function SetRow({ weId, set, index, prev, onOpenRpe, onToggleCompleted }: SetRow
         backgroundColor: set.completed ? colors.successMuted : 'transparent',
       }}
     >
-      <Pressable
-        hitSlop={6}
-        onLongPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          updateSet(weId, set.id, { isWarmup: !set.isWarmup });
-        }}
-        style={{ width: COL.set, alignItems: 'center' }}
-      >
-        {set.isWarmup ? (
+      <Pressable hitSlop={6} onLongPress={cycleSetType} style={{ width: COL.set, alignItems: 'center' }}>
+        {set.isWarmup || set.isDropset ? (
           <View
             style={{
               width: 22,
               height: 22,
               borderRadius: radius.full,
               borderWidth: 1,
-              borderColor: colors.warning,
+              borderColor: markColor,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <AppText variant="caption" style={{ color: colors.warning, fontWeight: '700' }}>
-              {t('workout.warmupShort')}
+            <AppText variant="caption" style={{ color: markColor, fontWeight: '700' }}>
+              {set.isWarmup ? t('workout.warmupShort') : t('workout.dropsetShort')}
             </AppText>
           </View>
         ) : (
           <AppText variant="bodyBold" color="secondary">
-            {index + 1}
+            {number}
           </AppText>
         )}
       </Pressable>
@@ -216,15 +221,15 @@ interface ExerciseCardProps {
   index: number;
   onOpenRpe: (weId: string, set: WorkoutSet) => void;
   onToggleCompleted: (weId: string, set: WorkoutSet) => void;
+  onOpenMenu: (we: WorkoutExercise, name: string) => void;
 }
 
-function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardProps) {
+function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted, onOpenMenu }: ExerciseCardProps) {
   const { colors, spacing } = useTheme();
   const router = useRouter();
   const t = useT();
   const lang = useLanguage();
   const addSet = useWorkoutStore((s) => s.addSet);
-  const removeExerciseFromActive = useWorkoutStore((s) => s.removeExerciseFromActive);
   const lastSetsFor = useWorkoutStore((s) => s.lastSetsFor);
   const customExercises = useExerciseStore((s) => s.customExercises);
 
@@ -233,15 +238,9 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
   const name = exercise ? exerciseDisplayName(exercise, lang) : t('workout.unknownExercise');
   const lastSets = lastSetsFor(we.exerciseId);
 
-  const confirmRemove = () => {
-    confirmDialog({
-      title: t('workout.removeExerciseTitle'),
-      message: t('workout.removeExerciseMessage', { name }),
-      confirmLabel: t('common.remove'),
-      destructive: true,
-      onConfirm: () => removeExerciseFromActive(we.id),
-    });
-  };
+  // Arbeidssett nummereres 1..n — oppvarming og dropsett hopper over telleren
+  let workingNumber = 0;
+  const numbers = we.sets.map((s) => (s.isWarmup || s.isDropset ? null : ++workingNumber));
 
   const labelStyle = { fontSize: 10 } as const;
 
@@ -249,15 +248,12 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
     <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 40).duration(250)}>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Pressable
-            style={{ flex: 1 }}
-            onPress={() => router.push(`/exercises/${we.exerciseId}`)}
-          >
-            <AppText variant="subheading" color="accent" numberOfLines={1}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="subheading" numberOfLines={1}>
               {name}
             </AppText>
-          </Pressable>
-          <Pressable hitSlop={8} onPress={confirmRemove}>
+          </View>
+          <Pressable hitSlop={8} onPress={() => onOpenMenu(we, name)}>
             <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
           </Pressable>
         </View>
@@ -298,7 +294,7 @@ function ExerciseCard({ we, index, onOpenRpe, onToggleCompleted }: ExerciseCardP
             key={set.id}
             weId={we.id}
             set={set}
-            index={i}
+            number={numbers[i]}
             prev={lastSets?.[i]}
             onOpenRpe={onOpenRpe}
             onToggleCompleted={onToggleCompleted}
@@ -323,6 +319,7 @@ export default function ActiveWorkoutScreen() {
   const { colors, spacing, radius } = useTheme();
   const router = useRouter();
   const t = useT();
+  const insets = useSafeAreaInsets();
 
   const active = useWorkoutStore((s) => s.active);
   const cancelActive = useWorkoutStore((s) => s.cancelActive);
@@ -330,16 +327,22 @@ export default function ActiveWorkoutScreen() {
   const updateActive = useWorkoutStore((s) => s.updateActive);
   const updateSet = useWorkoutStore((s) => s.updateSet);
   const addExerciseToActive = useWorkoutStore((s) => s.addExerciseToActive);
+  const removeExerciseFromActive = useWorkoutStore((s) => s.removeExerciseFromActive);
+  const moveExerciseInActive = useWorkoutStore((s) => s.moveExerciseInActive);
   const user = useAuthStore((s) => s.user);
 
   const [editingName, setEditingName] = useState(false);
   const nameDraft = useRef('');
   const [pickerVisible, setPickerVisible] = useState(false);
   const [rpeTarget, setRpeTarget] = useState<{ weId: string; set: WorkoutSet } | null>(null);
+  // menuTarget beholdes etter lukking så innholdet ikke hopper under lukkeanimasjonen
+  const [menuTarget, setMenuTarget] = useState<{ we: WorkoutExercise; name: string } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [finishVisible, setFinishVisible] = useState(false);
   const [share, setShare] = useState(user?.shareWorkouts ?? true);
   const [saving, setSaving] = useState(false);
-  const [autoRest, setAutoRest] = useState(true);
+  const autoRest = useWorkoutStore((s) => s.restAutoStart);
+  const setRestAutoStart = useWorkoutStore((s) => s.setRestAutoStart);
   const restTimerRef = useRef<RestTimerHandle>(null);
 
   if (!active) {
@@ -352,6 +355,11 @@ export default function ActiveWorkoutScreen() {
     0,
   );
 
+  const leaveScreen = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/trening');
+  };
+
   const confirmCancel = () => {
     confirmDialog({
       title: t('workout.cancelTitle'),
@@ -360,7 +368,8 @@ export default function ActiveWorkoutScreen() {
       destructive: true,
       onConfirm: () => {
         cancelActive();
-        router.back();
+        clearRestTimer();
+        leaveScreen();
       },
     });
   };
@@ -376,7 +385,11 @@ export default function ActiveWorkoutScreen() {
     updateSet(weId, set.id, { completed: next });
     if (next) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (autoRest && !set.isWarmup) restTimerRef.current?.start();
+      // Dropsett utføres uten pause — ikke start hvile når neste sett er et dropsett
+      const we = active.exercises.find((e) => e.id === weId);
+      const idx = we ? we.sets.findIndex((s) => s.id === set.id) : -1;
+      const nextIsDropset = idx >= 0 && we?.sets[idx + 1]?.isDropset === true;
+      if (autoRest && !set.isWarmup && !nextIsDropset) restTimerRef.current?.start();
     } else {
       Haptics.selectionAsync();
     }
@@ -396,6 +409,7 @@ export default function ActiveWorkoutScreen() {
     setSaving(true);
     try {
       const workout = await finishActive(share);
+      clearRestTimer();
       setSaving(false);
       setFinishVisible(false);
       if (!workout) {
@@ -420,21 +434,29 @@ export default function ActiveWorkoutScreen() {
     Math.round((Date.now() - new Date(active.startedAt).getTime()) / 60_000),
   );
 
+  const menuIndex = menuTarget
+    ? active.exercises.findIndex((e) => e.id === menuTarget.we.id)
+    : -1;
+
   return (
-    <Screen padded={false}>
-      {/* Topplinje: avbryt, navn + timer, fullfør */}
+    <Screen padded={false} edges={[]}>
+      {/* Topplinje: avbryt, navn + timer, fullfør. Toppinnrykk settes manuelt —
+          skjermen er fullScreenModal, der Screen sin SafeAreaView måler 0. */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing.sm,
           paddingHorizontal: spacing.screen,
-          paddingVertical: spacing.md,
+          paddingTop: insets.top + spacing.md,
+          paddingBottom: spacing.md,
         }}
       >
+        {/* Minimer: økten fortsetter i bakgrunnen og kan gjenopptas fra trening-fanen */}
         <Pressable
           hitSlop={8}
-          onPress={confirmCancel}
+          onPress={leaveScreen}
+          accessibilityLabel={t('workout.minimizeHint')}
           style={({ pressed }) => ({
             width: 36,
             height: 36,
@@ -445,7 +467,7 @@ export default function ActiveWorkoutScreen() {
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Ionicons name="close" size={20} color={colors.textPrimary} />
+          <Ionicons name="chevron-down" size={22} color={colors.textPrimary} />
         </Pressable>
 
         <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
@@ -526,6 +548,10 @@ export default function ActiveWorkoutScreen() {
                 index={i}
                 onOpenRpe={(weId, set) => setRpeTarget({ weId, set })}
                 onToggleCompleted={onToggleCompleted}
+                onOpenMenu={(target, name) => {
+                  setMenuTarget({ we: target, name });
+                  setMenuVisible(true);
+                }}
               />
             ))
           )}
@@ -551,13 +577,24 @@ export default function ActiveWorkoutScreen() {
           <AppText variant="caption" color="muted" style={{ textAlign: 'center' }}>
             {t('workout.warmupTip')}
           </AppText>
+
+          {/* Forkast hele økten — å lukke skjermen med pilen avslutter den ikke */}
+          <View style={{ alignItems: 'center' }}>
+            <Button
+              title={t('workout.cancelConfirm')}
+              icon="trash-outline"
+              variant="danger"
+              size="sm"
+              onPress={confirmCancel}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <RestTimer
         ref={restTimerRef}
         autoStart={autoRest}
-        onToggleAutoStart={() => setAutoRest((v) => !v)}
+        onToggleAutoStart={() => setRestAutoStart(!autoRest)}
       />
 
       <ExercisePickerSheet
@@ -618,6 +655,74 @@ export default function ActiveWorkoutScreen() {
         </View>
       </Sheet>
 
+      {/* Øvelsesmeny: endre rekkefølge eller fjern. Holdes åpen ved flytting så
+          man kan flytte flere hakk uten å åpne på nytt. */}
+      <Sheet visible={menuVisible} onClose={() => setMenuVisible(false)} title={menuTarget?.name}>
+        <View style={{ gap: spacing.xs }}>
+          {(
+            [
+              { key: 'up', icon: 'arrow-up' as const, label: t('workout.moveUp'), disabled: menuIndex <= 0 },
+              {
+                key: 'down',
+                icon: 'arrow-down' as const,
+                label: t('workout.moveDown'),
+                disabled: menuIndex < 0 || menuIndex >= active.exercises.length - 1,
+              },
+            ]
+          ).map((item) => (
+            <Pressable
+              key={item.key}
+              disabled={item.disabled}
+              onPress={() => {
+                if (!menuTarget) return;
+                Haptics.selectionAsync();
+                moveExerciseInActive(menuTarget.we.id, item.key === 'up' ? -1 : 1);
+              }}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.md,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.sm,
+                borderRadius: radius.md,
+                opacity: item.disabled ? 0.35 : pressed ? 0.7 : 1,
+              })}
+            >
+              <Ionicons name={item.icon} size={20} color={colors.textPrimary} />
+              <AppText variant="body">{item.label}</AppText>
+            </Pressable>
+          ))}
+          <Pressable
+            onPress={() => {
+              const target = menuTarget;
+              setMenuVisible(false);
+              if (!target) return;
+              confirmDialog({
+                title: t('workout.removeExerciseTitle'),
+                message: t('workout.removeExerciseMessage', { name: target.name }),
+                confirmLabel: t('common.remove'),
+                destructive: true,
+                onConfirm: () => removeExerciseFromActive(target.we.id),
+              });
+            }}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.md,
+              paddingVertical: spacing.md,
+              paddingHorizontal: spacing.sm,
+              borderRadius: radius.md,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
+            <AppText variant="body" style={{ color: colors.danger }}>
+              {t('workout.removeExerciseTitle')}
+            </AppText>
+          </Pressable>
+        </View>
+      </Sheet>
+
       {/* Fullfør-oppsummering */}
       <Sheet
         visible={finishVisible}
@@ -629,7 +734,7 @@ export default function ActiveWorkoutScreen() {
         <View style={{ gap: spacing.lg }}>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {[
-              { label: t('workout.duration'), value: formatDuration(durationMin) },
+              { label: t('workout.duration'), value: formatMinutes(durationMin) },
               { label: t('common.volume'), value: formatVolume(workoutVolume(active.exercises)) },
               { label: t('common.sets'), value: String(completedSetCount(active.exercises)) },
             ].map((stat) => (

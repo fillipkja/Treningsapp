@@ -12,6 +12,11 @@ const nb = {
   'home.emptyAction': 'Start økt',
   'home.moreExercises': '+{count} til',
   'home.unknownExercise': 'Ukjent øvelse',
+  // Påminnelse om muskelgrupper som har ventet lengst
+  'home.muscleCardTitle': 'På tide å trene',
+  'home.muscleCardSubtitle': '{muscles} har ventet lengst.',
+  'home.muscleCardSubtitleOne': '{muscles} har ventet lengst.',
+  'home.listAnd': 'og',
   // Opplasting av lokale data fra gammel versjon
   'home.legacyTitle': 'Økter lagret på denne enheten',
   'home.legacyMessage': 'Du har økter lagret lokalt fra før — vil du laste dem opp til kontoen din?',
@@ -35,6 +40,10 @@ const en: Record<keyof typeof nb, string> = {
   'home.emptyAction': 'Start workout',
   'home.moreExercises': '+{count} more',
   'home.unknownExercise': 'Unknown exercise',
+  'home.muscleCardTitle': 'Time to train',
+  'home.muscleCardSubtitle': '{muscles} have waited longest.',
+  'home.muscleCardSubtitleOne': '{muscles} has waited longest.',
+  'home.listAnd': 'and',
   'home.legacyTitle': 'Workouts saved on this device',
   'home.legacyMessage': 'You have workouts saved locally from before — upload them to your account?',
   'home.legacyUpload': 'Upload',

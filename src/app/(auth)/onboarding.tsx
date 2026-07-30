@@ -15,13 +15,14 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { useLanguage, useT, type TranslationKey } from '@/i18n';
-import { goalLabel } from '@/i18n/labels';
+import { genderLabel, goalLabel } from '@/i18n/labels';
 import { useAuthStore } from '@/lib/store/auth';
 import { avatarColors, useTheme } from '@/theme';
-import type { TrainingGoal } from '@/types';
+import type { Gender, TrainingGoal } from '@/types';
 
 const STEP_COUNT = 4;
 const USERNAME_RE = /^[a-z0-9._]+$/;
+const GENDER_VALUES: Gender[] = ['mann', 'kvinne', 'annet'];
 
 const GOALS: { value: TrainingGoal; icon: keyof typeof Ionicons.glyphMap }[] = [
   { value: 'styrke', icon: 'barbell-outline' },
@@ -48,7 +49,7 @@ function parseOptionalNumber(value: string): number | undefined {
 
 /**
  * Serverbasert onboarding: profilen opprettes i Supabase via completeOnboarding.
- * Avatar er farge + initialer — bildeopplasting til server er ikke støttet ennå.
+ * Avatar er farge + initialer her — bilde og ikon velges under «Rediger profil».
  */
 export default function OnboardingScreen() {
   const theme = useTheme();
@@ -70,6 +71,7 @@ export default function OnboardingScreen() {
   // Steg 3: kropp (valgfritt)
   const [heightStr, setHeightStr] = useState('');
   const [weightStr, setWeightStr] = useState('');
+  const [gender, setGender] = useState<Gender | undefined>(undefined);
 
   // Steg 4: mål
   const [goal, setGoal] = useState<TrainingGoal | undefined>(undefined);
@@ -89,6 +91,7 @@ export default function OnboardingScreen() {
       avatarColor,
       heightCm: parseOptionalNumber(heightStr),
       weightKg: parseOptionalNumber(weightStr),
+      gender,
       goal,
     });
     setSubmitting(false);
@@ -236,6 +239,25 @@ export default function OnboardingScreen() {
                   placeholder="80"
                   keyboardType="numeric"
                 />
+              </View>
+            </View>
+            <View style={{ gap: theme.spacing.sm }}>
+              <AppText variant="label" color="muted">
+                {t('auth.genderLabel')}
+              </AppText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
+                {GENDER_VALUES.map((value) => (
+                  <Chip
+                    key={value}
+                    label={genderLabel(value, lang)}
+                    selected={gender === value}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      // Trykk på valgt chip fjerner valget — feltet er frivillig
+                      setGender(gender === value ? undefined : value);
+                    }}
+                  />
+                ))}
               </View>
             </View>
             <AppText variant="caption" color="muted">

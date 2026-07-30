@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Integrasjonstester for LØFT sin Supabase-backend (supabase/migrations/0001_init.sql).
+// Integrasjonstester for LØFT sin Supabase-backend (supabase/migrations/).
 // Kjøres med: node scripts/integration-test.mjs
 // Krever env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 //
@@ -86,6 +86,14 @@ async function signIn(user) {
 let sharedWorkoutId = null;
 let privateWorkoutId = null;
 let challengeId = null;
+let sharedRecordId = null;
+let privateRecordId = null;
+let sharedRunId = null;
+let privateRunId = null;
+let strengthSharedWorkoutId = null;
+let strengthPrivateWorkoutId = null;
+let leaderboardRecordId = null;
+let hiddenLeaderboardRecordId = null;
 
 // ---------------------------------------------------------------- hovedløp
 async function main() {
@@ -487,7 +495,6 @@ async function main() {
       user_id: userA.id,
       exercise_id: 'benkpress',
       best_weight_kg: 100,
-      best_est_1rm: 120,
       best_reps: 10,
       best_set_volume_kg: 1000,
     });
@@ -513,8 +520,367 @@ async function main() {
     assert(asB.data === true, 'are_friends skulle vært true for partene selv');
   });
 
-  // ------------------------------------------------------------ 14. vennskap fjernes
-  await test(14, 'Vennskap fjernes: B sletter; B ser ikke lenger A sin delte økt', async () => {
+  // ------------------------------------------------------------ 14. delte rekorder
+  await test(14, 'Rekorder: B (venn) ser A sin delte rekord via shared_records_for', async () => {
+    const shared = await a
+      .from('manual_records')
+      .insert({
+        user_id: userA.id,
+        exercise_id: 'benkpress',
+        weight_kg: 110,
+        reps: 1,
+        is_shared: true,
+        location: 'Testgymmet',
+        bodyweight_kg: 82.5,
+        notes: 'privat notat',
+      })
+      .select('id')
+      .single();
+    assertNoError(shared.error, 'A oppretter delt rekord');
+    sharedRecordId = shared.data.id;
+
+    const priv = await a
+      .from('manual_records')
+      .insert({
+        user_id: userA.id,
+        exercise_id: 'knebøy',
+        weight_kg: 150,
+        reps: 1,
+        is_shared: false,
+      })
+      .select('id')
+      .single();
+    assertNoError(priv.error, 'A oppretter udelt rekord');
+    privateRecordId = priv.data.id;
+
+    const { data, error } = await b.rpc('shared_records_for', { owner: userA.id });
+    assertNoError(error, 'B kaller shared_records_for');
+    assert(data.length === 1, `B skulle sett nøyaktig 1 rekord, så ${data.length}`);
+    assert(data[0].id === sharedRecordId, 'rekorden B ser er ikke den delte');
+    assert(Number(data[0].weight_kg) === 110, `weight_kg var ${data[0].weight_kg}, forventet 110`);
+    // Sted, kroppsvekt og notater er helse-/persondata og skal ikke være med
+    assert(
+      !('location' in data[0]) && !('bodyweight_kg' in data[0]) && !('notes' in data[0]),
+      'shared_records_for returnerer private kolonner'
+    );
+  });
+
+  // ------------------------------------------------------------ 15. udelte rekorder deles ikke
+  await test(15, 'Rekorder: is_shared=false holdes utenfor shared_records_for', async () => {
+    assert(privateRecordId, 'mangler rekord-id fra test 14');
+    const { data, error } = await b.rpc('shared_records_for', { owner: userA.id });
+    assertNoError(error, 'B kaller shared_records_for');
+    assert(
+      !data.some((r) => r.id === privateRecordId),
+      'den udelte rekorden lekker til venner'
+    );
+  });
+
+  // ------------------------------------------------------------ 16. rekorder er venne-avgrenset
+  await test(16, 'Rekorder: C (ikke venn) får 0 rader; direkte select stoppes av RLS', async () => {
+    const asC = await c.rpc('shared_records_for', { owner: userA.id });
+    assertNoError(asC.error, 'C kaller shared_records_for om A');
+    assert(asC.data.length === 0, `C skulle sett 0 rekorder (ikke venn), så ${asC.data.length}`);
+
+    const direct = await b.from('manual_records').select('id').eq('user_id', userA.id);
+    assertNoError(direct.error, 'B leser manual_records direkte');
+    assert(
+      direct.data.length === 0,
+      `direkte select skulle gitt 0 rader (RLS), så ${direct.data.length}`
+    );
+
+    // Rydd opp: A sletter testrekordene sine
+    const del = await a.from('manual_records').delete().eq('user_id', userA.id).select('id');
+    assertNoError(del.error, 'A sletter testrekordene');
+    assert(del.data.length === 2, `oppryddingen traff ${del.data.length} rader, forventet 2`);
+  });
+
+  // ------------------------------------------------------------ 17. løperekorder
+  await test(17, 'Løp: B (venn) ser kun A sitt delte løp; direkte select stoppes av RLS', async () => {
+    const shared = await a
+      .from('run_records')
+      .insert({
+        user_id: userA.id,
+        distance_m: 5000,
+        duration_sec: 1351,
+        is_shared: true,
+        location: 'Testparken',
+        notes: 'privat notat',
+      })
+      .select('id')
+      .single();
+    assertNoError(shared.error, 'A registrerer delt løp');
+    sharedRunId = shared.data.id;
+
+    const hidden = await a
+      .from('run_records')
+      .insert({
+        user_id: userA.id,
+        distance_m: 5000,
+        duration_sec: 1290,
+        is_shared: false,
+      })
+      .select('id')
+      .single();
+    assertNoError(hidden.error, 'A registrerer skjult løp');
+    privateRunId = hidden.data.id;
+
+    const direct = await b.from('run_records').select('id').eq('user_id', userA.id);
+    assertNoError(direct.error, 'B leser run_records direkte');
+    assert(
+      direct.data.length === 0,
+      `direkte select skulle gitt 0 rader (RLS), så ${direct.data.length}`
+    );
+
+    const { data, error } = await b.rpc('shared_runs_for', { owner: userA.id });
+    assertNoError(error, 'B kaller shared_runs_for');
+    assert(data.length === 1, `B skulle sett nøyaktig 1 løp, så ${data.length}`);
+    assert(data[0].id === sharedRunId, 'løpet B ser er ikke det delte');
+    assert(
+      !data.some((r) => r.id === privateRunId),
+      'det skjulte løpet lekker til venner'
+    );
+    // Sted og notater er persondata og skal ikke være med
+    assert(
+      !('location' in data[0]) && !('notes' in data[0]),
+      'shared_runs_for returnerer private kolonner'
+    );
+  });
+
+  // ------------------------------------------------------------ 18. styrke-ledertavle
+  await test(18, 'strength_leaderboard: manuell rekord vinner; udelt løft lekker ikke', async () => {
+    const fiveByFive = Array.from({ length: 5 }, (_, i) => ({
+      id: `s5x5-${i}`,
+      reps: 5,
+      weightKg: 100,
+      completed: true,
+    }));
+    const shared = await a
+      .from('workouts')
+      .insert({
+        user_id: userA.id,
+        name: 'Ledertavle delt',
+        is_shared: true,
+        exercises: [
+          {
+            id: 'we-lt1',
+            exerciseId: 'benkpress',
+            sets: [{ id: 's-lt1', reps: 1, weightKg: 140, completed: true }, ...fiveByFive],
+          },
+        ],
+      })
+      .select('id')
+      .single();
+    assertNoError(shared.error, 'A oppretter delt ledertavle-økt');
+    strengthSharedWorkoutId = shared.data.id;
+
+    const hidden = await a
+      .from('workouts')
+      .insert({
+        user_id: userA.id,
+        name: 'Ledertavle udelt',
+        is_shared: false,
+        exercises: [
+          {
+            id: 'we-lt2',
+            exerciseId: 'benkpress',
+            sets: [{ id: 's-lt2', reps: 1, weightKg: 180, completed: true }],
+          },
+        ],
+      })
+      .select('id')
+      .single();
+    assertNoError(hidden.error, 'A oppretter udelt ledertavle-økt');
+    strengthPrivateWorkoutId = hidden.data.id;
+
+    // Rekordene fra test 14–16 er ryddet bort: legg inn en ny delt rekord
+    const record = await a
+      .from('manual_records')
+      .insert({
+        user_id: userA.id,
+        exercise_id: 'benkpress',
+        weight_kg: 150,
+        reps: 1,
+        is_shared: true,
+      })
+      .select('id')
+      .single();
+    assertNoError(record.error, 'A oppretter delt ledertavle-rekord');
+    leaderboardRecordId = record.data.id;
+
+    // ... og en SKJULT rekord som er tyngre — den skal aldri nå B
+    const hiddenRecord = await a
+      .from('manual_records')
+      .insert({
+        user_id: userA.id,
+        exercise_id: 'benkpress',
+        weight_kg: 200,
+        reps: 1,
+        is_shared: false,
+      })
+      .select('id')
+      .single();
+    assertNoError(hiddenRecord.error, 'A oppretter skjult ledertavle-rekord');
+    hiddenLeaderboardRecordId = hiddenRecord.data.id;
+
+    // 1x1: den delte rekorden (150) vinner over økt-settet (140); udelt økt (180)
+    // og skjult rekord (200) er usynlige for B
+    const single = await b.rpc('strength_leaderboard', {
+      ex_id: 'benkpress',
+      min_reps: 1,
+      min_sets: 1,
+    });
+    assertNoError(single.error, 'B kaller strength_leaderboard (1x1)');
+    const singleA = single.data.find((r) => r.user_id === userA.id);
+    assert(singleA, 'A mangler i styrke-ledertavlen');
+    assert(
+      Number(singleA.best_weight_kg) === 150,
+      `A sin beste vekt (1x1) var ${singleA.best_weight_kg}, forventet 150 — lekker den udelte økten (180) eller den skjulte rekorden (200)?`
+    );
+
+    // A ser sin egen skjulte rekord i egen tavle
+    const ownSingle = await a.rpc('strength_leaderboard', {
+      ex_id: 'benkpress',
+      min_reps: 1,
+      min_sets: 1,
+    });
+    assertNoError(ownSingle.error, 'A kaller strength_leaderboard (1x1)');
+    const ownSingleA = ownSingle.data.find((r) => r.user_id === userA.id);
+    assert(
+      ownSingleA && Number(ownSingleA.best_weight_kg) === 200,
+      `A sin egen beste vekt var ${ownSingleA?.best_weight_kg}, forventet 200 (egen skjult rekord)`
+    );
+
+    // 5x5: fem sett på 100 i samme økt kvalifiserer; rekorden (enkeltsett) teller ikke
+    const fives = await b.rpc('strength_leaderboard', {
+      ex_id: 'benkpress',
+      min_reps: 5,
+      min_sets: 5,
+    });
+    assertNoError(fives.error, 'B kaller strength_leaderboard (5x5)');
+    const fivesA = fives.data.find((r) => r.user_id === userA.id);
+    assert(fivesA, 'A mangler i 5x5-tavlen');
+    assert(
+      Number(fivesA.best_weight_kg) === 100,
+      `A sin beste 5x5-vekt var ${fivesA.best_weight_kg}, forventet 100`
+    );
+  });
+
+  // ------------------------------------------------------------ 19. manuell 5x5 og udatert rekord
+  await test(19, 'strength_leaderboard: manuell 5x5-rekord teller; udatert rekord deles', async () => {
+    // Udatert 5x5-rekord — dato er valgfri (0006), sett-antallet må dekke tavlekravet
+    const rec = await a
+      .from('manual_records')
+      .insert({
+        user_id: userA.id,
+        exercise_id: 'benkpress',
+        weight_kg: 110,
+        reps: 5,
+        sets: 5,
+        date: null,
+        is_shared: true,
+      })
+      .select('id, sets, date')
+      .single();
+    assertNoError(rec.error, 'A oppretter udatert 5x5-rekord');
+    assert(rec.data.sets === 5, `sets ble ${rec.data.sets}, forventet 5`);
+    assert(rec.data.date === null, `date ble ${rec.data.date}, forventet null`);
+
+    // 5x5-tavlen: den manuelle 5x5-rekorden (110) slår øktens fem sett på 100
+    const fives = await b.rpc('strength_leaderboard', {
+      ex_id: 'benkpress',
+      min_reps: 5,
+      min_sets: 5,
+    });
+    assertNoError(fives.error, 'B kaller strength_leaderboard (5x5)');
+    const fivesA = fives.data.find((r) => r.user_id === userA.id);
+    assert(
+      fivesA && Number(fivesA.best_weight_kg) === 110,
+      `A sin beste 5x5-vekt var ${fivesA?.best_weight_kg}, forventet 110 (manuell 5x5-rekord)`
+    );
+
+    // Venner ser rekorden med sett-antall og uten dato via shared_records_for
+    const sharedView = await b.rpc('shared_records_for', { owner: userA.id });
+    assertNoError(sharedView.error, 'B kaller shared_records_for');
+    const sharedRec = sharedView.data.find((r) => r.id === rec.data.id);
+    assert(sharedRec, 'B ser ikke den delte 5x5-rekorden');
+    assert(sharedRec.sets === 5, `delt rekord hadde sets ${sharedRec.sets}, forventet 5`);
+    assert(sharedRec.date === null, `delt rekord hadde date ${sharedRec.date}, forventet null`);
+
+    // Rydd: ikke la 5x5-rekorden påvirke senere tavletester
+    const del = await a.from('manual_records').delete().eq('id', rec.data.id);
+    assertNoError(del.error, 'A sletter 5x5-rekorden');
+  });
+
+  // ------------------------------------------------------------ 20. løpe-ledertavle
+  await test(20, 'running_leaderboard: delt løp teller; C (ikke venn) ser ingenting', async () => {
+    const asB = await b.rpc('running_leaderboard', { dist_m: 5000 });
+    assertNoError(asB.error, 'B kaller running_leaderboard');
+    const rowA = asB.data.find((r) => r.user_id === userA.id);
+    assert(rowA, 'A mangler i løpe-tavlen');
+    assert(
+      Number(rowA.best_sec) === 1351,
+      `A sin beste tid var ${rowA.best_sec} — det skjulte løpet (1290) lekker til B`
+    );
+    assert(!asB.data.some((r) => r.user_id === userB.id), 'B (uten løp) skulle ikke hatt rad');
+
+    // A ser sitt eget skjulte løp i egen tavle
+    const asA = await a.rpc('running_leaderboard', { dist_m: 5000 });
+    assertNoError(asA.error, 'A kaller running_leaderboard');
+    const ownA = asA.data.find((r) => r.user_id === userA.id);
+    assert(
+      ownA && Number(ownA.best_sec) === 1290,
+      `A sin egen beste tid var ${ownA?.best_sec}, forventet 1290`
+    );
+
+    // C er ikke venn med A og har ingen egne data: tavlene er tomme
+    const asC = await c.rpc('strength_leaderboard', {
+      ex_id: 'benkpress',
+      min_reps: 1,
+      min_sets: 1,
+    });
+    assertNoError(asC.error, 'C kaller strength_leaderboard');
+    assert(asC.data.length === 0, `C skulle sett 0 rader (ikke venn), så ${asC.data.length}`);
+
+    const asCRun = await c.rpc('running_leaderboard', { dist_m: 5000 });
+    assertNoError(asCRun.error, 'C kaller running_leaderboard');
+    assert(asCRun.data.length === 0, `C skulle sett 0 løpe-rader (ikke venn), så ${asCRun.data.length}`);
+
+    const asCShared = await c.rpc('shared_runs_for', { owner: userA.id });
+    assertNoError(asCShared.error, 'C kaller shared_runs_for om A');
+    assert(
+      asCShared.data.length === 0,
+      `C (ikke venn) skulle sett 0 delte løp, så ${asCShared.data.length}`
+    );
+
+    // Rydd opp: løpene, ledertavle-øktene og ledertavle-rekordene
+    const delRuns = await a.from('run_records').delete().eq('user_id', userA.id).select('id');
+    assertNoError(delRuns.error, 'A sletter testløpene');
+    assert(delRuns.data.length === 2, `oppryddingen traff ${delRuns.data.length} løp, forventet 2`);
+    const delWorkouts = await a
+      .from('workouts')
+      .delete()
+      .in('id', [strengthSharedWorkoutId, strengthPrivateWorkoutId])
+      .select('id');
+    assertNoError(delWorkouts.error, 'A sletter ledertavle-øktene');
+    assert(
+      delWorkouts.data.length === 2,
+      `oppryddingen traff ${delWorkouts.data.length} økter, forventet 2`
+    );
+    const delRecords = await a
+      .from('manual_records')
+      .delete()
+      .in('id', [leaderboardRecordId, hiddenLeaderboardRecordId])
+      .select('id');
+    assertNoError(delRecords.error, 'A sletter ledertavle-rekordene');
+    assert(
+      delRecords.data.length === 2,
+      `oppryddingen traff ${delRecords.data.length} rekorder, forventet 2`
+    );
+  });
+
+  // ------------------------------------------------------------ 21. vennskap fjernes
+  await test(21, 'Vennskap fjernes: B sletter; B ser ikke lenger A sin delte økt', async () => {
     const del = await b
       .from('friendships')
       .delete()
@@ -529,10 +895,10 @@ async function main() {
     assert(asB.data.length === 0, `B skulle sett 0 økter etter brudd, så ${asB.data.length}`);
   });
 
-  // ------------------------------------------------------------ 15. partene i et vennskap er låst
+  // ------------------------------------------------------------ 22. partene i et vennskap er låst
   // Kjøres ETTER at A–B-vennskapet er slettet, ellers ville pair-indeksen
   // blokkert kapringen og testen ha bestått av feil grunn.
-  await test(15, 'Vennskap: mottaker kan ikke bytte parter og «akseptere» for andre', async () => {
+  await test(22, 'Vennskap: mottaker kan ikke bytte parter og «akseptere» for andre', async () => {
     const req = await c.from('friendships').insert({
       requester_id: userC.id,
       addressee_id: userB.id,
@@ -578,8 +944,8 @@ async function main() {
     assertNoError(del.error, 'B avslår forespørselen fra C');
   });
 
-  // ------------------------------------------------------------ 16. privat kroppsdata
-  await test(16, 'profile_private: B kan ikke lese A sin høyde/vekt', async () => {
+  // ------------------------------------------------------------ 23. privat kroppsdata
+  await test(23, 'profile_private: B kan ikke lese A sin høyde/vekt', async () => {
     const mine = await a
       .from('profile_private')
       .upsert({ id: userA.id, height_cm: 182, weight_kg: 82.5 })

@@ -6,7 +6,7 @@ import { AppText, Avatar, Card } from '@/components/ui';
 import { PrBadge } from '@/components/workout/pr-badge';
 import { useLanguage, useT, type AppLanguage } from '@/i18n';
 import { exerciseDisplayName } from '@/lib/data/exercise-i18n';
-import { formatDuration, formatKg, formatTimeAgo, formatVolume } from '@/lib/format';
+import { formatKg, formatMinutes, formatTimeAgo, formatVolume } from '@/lib/format';
 import { getExerciseById } from '@/lib/store/exercises';
 import { useTheme } from '@/theme';
 import type { UserProfile, Workout, WorkoutExercise } from '@/types';
@@ -87,6 +87,7 @@ export function WorkoutCard({
             name={author.displayName || author.username}
             color={author.avatarColor}
             uri={author.avatarUri}
+            icon={author.avatarIcon}
             size={40}
           />
           <View style={{ flex: 1 }}>
@@ -135,7 +136,7 @@ export function WorkoutCard({
             {t('common.time')}
           </AppText>
           <AppText style={[typography.heading, { marginTop: 2 }]} numberOfLines={1}>
-            {workout.durationMin != null ? formatDuration(workout.durationMin) : '–'}
+            {workout.durationMin != null ? formatMinutes(workout.durationMin) : '–'}
           </AppText>
         </View>
       </View>

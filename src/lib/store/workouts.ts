@@ -42,11 +42,14 @@ function myUserId(): string {
 function samePR(a: ExercisePR, b: ExercisePR): boolean {
   return (
     a.bestWeightKg === b.bestWeightKg &&
-    a.bestEst1RM === b.bestEst1RM &&
     a.bestReps === b.bestReps &&
     a.bestSetVolumeKg === b.bestSetVolumeKg &&
     a.updatedAt === b.updatedAt &&
-    a.history.length === b.history.length
+    a.history.length === b.history.length &&
+    a.history.every((h, i) => {
+      const o = b.history[i];
+      return h.date === o.date && h.weightKg === o.weightKg && h.reps === o.reps;
+    })
   );
 }
 
@@ -95,6 +98,10 @@ interface WorkoutState {
   active: ActiveWorkout | null;
   loaded: boolean;
   loading: boolean;
+  /** Om hviletimeren starter automatisk ved fullført sett — persistert så
+   *  valget overlever minimering av øktskjermen */
+  restAutoStart: boolean;
+  setRestAutoStart: (value: boolean) => void;
 
   /** Henter økter, rekorder og merker fra serveren */
   load: () => Promise<void>;
@@ -107,6 +114,8 @@ interface WorkoutState {
   ) => void;
   addExerciseToActive: (exerciseId: string) => void;
   removeExerciseFromActive: (workoutExerciseId: string) => void;
+  /** Flytt en øvelse ett hakk opp eller ned i den aktive økten */
+  moveExerciseInActive: (workoutExerciseId: string, direction: -1 | 1) => void;
   addSet: (workoutExerciseId: string) => void;
   updateSet: (workoutExerciseId: string, setId: string, patch: Partial<WorkoutSet>) => void;
   removeSet: (workoutExerciseId: string, setId: string) => void;
@@ -136,6 +145,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       active: null,
       loaded: false,
       loading: false,
+      restAutoStart: true,
+      setRestAutoStart: (value) => set({ restAutoStart: value }),
 
       load: async () => {
         if (get().loading) return;
@@ -212,6 +223,17 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : s,
         ),
+
+      moveExerciseInActive: (workoutExerciseId, direction) =>
+        set((s) => {
+          if (!s.active) return s;
+          const from = s.active.exercises.findIndex((e) => e.id === workoutExerciseId);
+          const to = from + direction;
+          if (from < 0 || to < 0 || to >= s.active.exercises.length) return s;
+          const exercises = [...s.active.exercises];
+          [exercises[from], exercises[to]] = [exercises[to], exercises[from]];
+          return { active: { ...s.active, exercises } };
+        }),
 
       addSet: (workoutExerciseId) =>
         set((s) => {
@@ -394,7 +416,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       // og skal ikke overskrives. Kun pågående økt persist'es lokalt.
       name: 'workouts-active',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ active: s.active }),
+      partialize: (s) => ({ active: s.active, restAutoStart: s.restAutoStart }),
     },
   ),
 );

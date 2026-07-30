@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText, Button, Chip, Divider, EmptyState, Input, Sheet } from '@/components/ui';
 import { ExerciseTile } from '@/components/exercises/exercise-tile';
@@ -119,10 +119,14 @@ export function ExerciseRow({
   exercise,
   onPress,
   chevron = false,
+  right,
 }: {
   exercise: Exercise;
-  onPress: () => void;
+  /** Uten onPress er raden ren informasjon (ikke trykkbar) */
+  onPress?: () => void;
   chevron?: boolean;
+  /** Eget innhold ytterst til høyre, f.eks. slett-knapp for egne øvelser */
+  right?: ReactNode;
 }) {
   const { colors, spacing, radius } = useTheme();
   const t = useT();
@@ -136,6 +140,7 @@ export function ExerciseRow({
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
       style={({ pressed }) => [styles.row, { gap: spacing.md, paddingVertical: spacing.md, opacity: pressed ? 0.7 : 1 }]}
     >
       <ExerciseTile exercise={exercise} size={46} />
@@ -161,6 +166,7 @@ export function ExerciseRow({
           </AppText>
         </View>
       ) : null}
+      {right}
       {chevron ? <Ionicons name="chevron-forward" size={18} color={colors.textMuted} /> : null}
     </Pressable>
   );

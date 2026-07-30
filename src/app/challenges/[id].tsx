@@ -316,6 +316,7 @@ export default function ChallengeDetailScreen() {
           name={profile?.displayName ?? '?'}
           color={profile?.avatarColor ?? colors.accent}
           uri={profile?.avatarUri}
+          icon={profile?.avatarIcon}
           size={36}
         />
         <View style={{ flex: 1, gap: spacing.xs }}>
@@ -472,6 +473,7 @@ export default function ChallengeDetailScreen() {
                               name={profile?.displayName ?? '?'}
                               color={profile?.avatarColor ?? colors.accent}
                               uri={profile?.avatarUri}
+                              icon={profile?.avatarIcon}
                               size={56}
                             />
                           </View>

@@ -30,16 +30,19 @@ export default function RootLayout() {
         />
         <Stack.Screen name="workout/[id]" />
         <Stack.Screen name="exercises/index" />
-        <Stack.Screen name="exercises/[id]" />
         <Stack.Screen name="exercises/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="programs/[id]" />
         <Stack.Screen name="programs/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="programs/library" />
         <Stack.Screen name="templates/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="records/index" />
+        <Stack.Screen name="records/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="friends/index" />
         <Stack.Screen name="friends/add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="friends/[id]" />
         <Stack.Screen name="challenges/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="challenges/[id]" />
+        <Stack.Screen name="leaderboards/index" />
         <Stack.Screen name="badges" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="settings/index" />

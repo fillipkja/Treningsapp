@@ -2,13 +2,6 @@ import { parseISO } from 'date-fns';
 import { dateKey } from '@/lib/format';
 import type { Workout, WorkoutExercise, WorkoutSet } from '@/types';
 
-/** Estimert 1RM etter Epley: vekt × (1 + reps/30). Ved 1 rep er vekten selve 1RM. */
-export function epley1RM(weightKg: number, reps: number): number {
-  if (reps <= 0 || weightKg <= 0) return 0;
-  if (reps === 1) return weightKg;
-  return Math.round(weightKg * (1 + reps / 30) * 10) / 10;
-}
-
 export function setVolume(set: WorkoutSet): number {
   return set.completed && !set.isWarmup ? set.weightKg * set.reps : 0;
 }
@@ -28,13 +21,15 @@ export function completedSetCount(exercises: WorkoutExercise[]): number {
   );
 }
 
-/** Beste (høyeste est. 1RM) fullførte arbeidssett i en øvelse */
+/** Beste fullførte arbeidssett i en øvelse: høyest vekt, ved lik vekt flest reps */
 export function bestSet(exercise: WorkoutExercise): WorkoutSet | undefined {
   return exercise.sets
     .filter((s) => s.completed && !s.isWarmup && s.weightKg > 0 && s.reps > 0)
     .reduce<WorkoutSet | undefined>(
       (best, s) =>
-        !best || epley1RM(s.weightKg, s.reps) > epley1RM(best.weightKg, best.reps) ? s : best,
+        !best || s.weightKg > best.weightKg || (s.weightKg === best.weightKg && s.reps > best.reps)
+          ? s
+          : best,
       undefined,
     );
 }

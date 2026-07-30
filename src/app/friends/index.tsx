@@ -158,6 +158,7 @@ export default function FriendsScreen() {
         name={profile.displayName || profile.username}
         color={profile.avatarColor}
         uri={profile.avatarUri}
+        icon={profile.avatarIcon}
         size={40}
       />
       <View style={{ flex: 1 }}>
@@ -300,6 +301,7 @@ export default function FriendsScreen() {
                                 name={profile.displayName || profile.username}
                                 color={profile.avatarColor}
                                 uri={profile.avatarUri}
+                                icon={profile.avatarIcon}
                                 size={40}
                               />
                             }

@@ -19,11 +19,15 @@ const nb = {
   'workout.removeExerciseMessage': 'Vil du fjerne «{name}» fra økten?',
   'workout.emptyTitle': 'Ingen øvelser ennå',
   'workout.emptyMessage': 'Legg til den første øvelsen for å komme i gang.',
-  'workout.warmupTip': 'Tips: hold inne settnummeret for å markere oppvarmingssett',
+  'workout.warmupTip': 'Tips: hold inne settnummeret for å veksle mellom oppvarming, dropsett og vanlig sett',
   'workout.warmupShort': 'O',
+  'workout.dropsetShort': 'D',
+  // Øvelsesmeny
+  'workout.moveUp': 'Flytt opp',
+  'workout.moveDown': 'Flytt ned',
   // RPE
   'workout.rpeTitle': 'RPE',
-  'workout.rpeHelp': 'Hvor hardt var settet? 6 = lett, 10 = maks innsats.',
+  'workout.rpeHelp': 'Hvor hardt var settet? 1 = veldig lett, 10 = maks innsats.',
   'workout.rpeClear': 'Fjern RPE',
   // Fullfør og lagre
   'workout.finish': 'Fullfør',
@@ -33,9 +37,10 @@ const nb = {
   'workout.saveFailedTitle': 'Kunne ikke lagre økten',
   'workout.noCompletedSetsTitle': 'Ingen fullførte sett',
   'workout.noCompletedSetsMessage': 'Fullfør minst ett sett før du lagrer økten.',
-  'workout.cancelTitle': 'Avbryt økt?',
+  'workout.cancelTitle': 'Forkast økten?',
   'workout.cancelMessage': 'Økten forkastes og loggede sett slettes.',
-  'workout.cancelConfirm': 'Avbryt økt',
+  'workout.cancelConfirm': 'Forkast økt',
+  'workout.minimizeHint': 'Lukk uten å avslutte — økten fortsetter i bakgrunnen',
   // Deling, liker og sletting
   'workout.shareTitle': 'Del med venner',
   'workout.shareDescription': 'Økten vises i feeden til vennene dine.',
@@ -64,6 +69,10 @@ const nb = {
   'workout.restDuration': 'Hvile {seconds} s',
   'workout.restSeconds': '{seconds} s',
   'workout.restAutoStart': 'Start automatisk når et sett fullføres',
+  'workout.restCustomLabel': 'Egen tid',
+  'workout.restMinPlaceholder': 'min',
+  'workout.restSecPlaceholder': 'sek',
+  'workout.restStart': 'Start',
 } as const;
 
 const en: Record<keyof typeof nb, string> = {
@@ -84,10 +93,13 @@ const en: Record<keyof typeof nb, string> = {
   'workout.removeExerciseMessage': 'Remove “{name}” from the workout?',
   'workout.emptyTitle': 'No exercises yet',
   'workout.emptyMessage': 'Add your first exercise to get started.',
-  'workout.warmupTip': 'Tip: long-press the set number to mark a warmup set',
+  'workout.warmupTip': 'Tip: long-press the set number to cycle between warmup, dropset and normal set',
   'workout.warmupShort': 'W',
+  'workout.dropsetShort': 'D',
+  'workout.moveUp': 'Move up',
+  'workout.moveDown': 'Move down',
   'workout.rpeTitle': 'RPE',
-  'workout.rpeHelp': 'How hard was the set? 6 = easy, 10 = max effort.',
+  'workout.rpeHelp': 'How hard was the set? 1 = very easy, 10 = max effort.',
   'workout.rpeClear': 'Clear RPE',
   'workout.finish': 'Finish',
   'workout.finishTitle': 'Finish workout',
@@ -99,6 +111,7 @@ const en: Record<keyof typeof nb, string> = {
   'workout.cancelTitle': 'Discard workout?',
   'workout.cancelMessage': 'The workout will be discarded and logged sets deleted.',
   'workout.cancelConfirm': 'Discard workout',
+  'workout.minimizeHint': 'Close without finishing — the workout continues in the background',
   'workout.shareTitle': 'Share with friends',
   'workout.shareDescription': 'The workout shows up in your friends’ feed.',
   'workout.shareErrorTitle': 'Could not change sharing',
@@ -124,6 +137,10 @@ const en: Record<keyof typeof nb, string> = {
   'workout.restDuration': 'Rest {seconds} s',
   'workout.restSeconds': '{seconds} s',
   'workout.restAutoStart': 'Start automatically when a set is completed',
+  'workout.restCustomLabel': 'Custom time',
+  'workout.restMinPlaceholder': 'min',
+  'workout.restSecPlaceholder': 'sec',
+  'workout.restStart': 'Start',
 } as const;
 
 export const workoutNb = nb;

@@ -338,6 +338,31 @@ export default function TreningScreen() {
             ))}
           </View>
         )}
+
+        {/* Ferdiglagde programmer å velge blant */}
+        <Card onPress={() => router.push('/programs/library')} style={{ marginTop: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: radius.md,
+                backgroundColor: colors.accentMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="library-outline" size={20} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="bodyBold">{t('training.library')}</AppText>
+              <AppText variant="caption" color="muted">
+                {t('training.librarySubtitle')}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </View>
+        </Card>
       </Animated.View>
 
       {/* Historikk */}

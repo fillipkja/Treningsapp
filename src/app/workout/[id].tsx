@@ -27,7 +27,7 @@ import { findExercise } from '@/lib/data/exercises';
 import { confirmDialog, infoDialog } from '@/lib/dialogs';
 import {
   dateKey,
-  formatDuration,
+  formatMinutes,
   formatFullDate,
   formatKg,
   formatNumber,
@@ -249,6 +249,7 @@ export default function WorkoutDetailScreen() {
               name={author.displayName}
               color={author.avatarColor}
               uri={author.avatarUri}
+              icon={author.avatarIcon}
               size={44}
             />
             <View style={{ flex: 1 }}>
@@ -294,7 +295,7 @@ export default function WorkoutDetailScreen() {
                 {t('workout.celebrationStats', {
                   volume: formatVolume(workout.totalVolumeKg),
                   sets: workout.totalSets,
-                  duration: formatDuration(workout.durationMin ?? 0),
+                  duration: formatMinutes(workout.durationMin ?? 0),
                 })}
               </AppText>
               {prExerciseNames.length > 0 ? (
@@ -350,7 +351,7 @@ export default function WorkoutDetailScreen() {
             <StatTile label={t('common.sets')} value={formatNumber(workout.totalSets)} />
           </View>
           <View style={{ flex: 1 }}>
-            <StatTile label={t('workout.duration')} value={formatDuration(workout.durationMin ?? 0)} />
+            <StatTile label={t('workout.duration')} value={formatMinutes(workout.durationMin ?? 0)} />
           </View>
         </View>
 
@@ -419,14 +420,16 @@ export default function WorkoutDetailScreen() {
           let workingIndex = 0;
           return (
             <Card key={we.id}>
-              <Pressable onPress={() => router.push(`/exercises/${we.exerciseId}`)}>
-                <AppText variant="subheading" color="accent" numberOfLines={1}>
-                  {exerciseName(we.exerciseId)}
-                </AppText>
-              </Pressable>
+              <AppText variant="subheading" numberOfLines={1}>
+                {exerciseName(we.exerciseId)}
+              </AppText>
               <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
                 {we.sets.map((set) => {
-                  const label = set.isWarmup ? t('workout.warmupShort') : String(++workingIndex);
+                  const label = set.isWarmup
+                    ? t('workout.warmupShort')
+                    : set.isDropset
+                      ? t('workout.dropsetShort')
+                      : String(++workingIndex);
                   return (
                     <View
                       key={set.id}
@@ -434,7 +437,7 @@ export default function WorkoutDetailScreen() {
                     >
                       <AppText
                         variant="bodyBold"
-                        color={set.isWarmup ? 'muted' : 'secondary'}
+                        color={set.isWarmup || set.isDropset ? 'muted' : 'secondary'}
                         style={{ width: 20, textAlign: 'center' }}
                       >
                         {label}
